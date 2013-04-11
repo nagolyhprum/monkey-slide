@@ -11,6 +11,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.RenderManager;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.system.AppSettings;
 
@@ -58,8 +59,11 @@ public class Main extends SimpleApplication {
         cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
         cylinder.setLocalTranslation(0, 2, 0);
 
+        Spatial oto = assetManager.loadModel("Models/Oto/Oto.mesh.xml");
+        oto.setLocalTranslation(0, 2, 0);
+        oto.scale(0.25f);
 
-        character.attachChild(cylinder);
+        character.attachChild(oto);
 
         rootNode.attachChild(character);
 
@@ -70,13 +74,15 @@ public class Main extends SimpleApplication {
         Vector3f l = Spline.getCubic(start, controlA, controlB, end, location),
                 d = Spline.getDirection(start, controlA, controlB, end, location);
         float xrot = FastMath.atan(d.y / d.z);
+        float yrot = FastMath.atan(d.x / d.z);
         Quaternion rot = new Quaternion();
         rot = rot.mult(new Quaternion().fromAngleAxis(rotation, d));
         rot = rot.mult(new Quaternion().fromAngleAxis(-xrot, Vector3f.UNIT_X));
+        rot = rot.mult(new Quaternion().fromAngleAxis(yrot, Vector3f.UNIT_Y));
         character.setLocalRotation(rot);
         character.setLocalTranslation(l);
-        location += tpf * 0.1;
-        //rotation += FastMath.TWO_PI * tpf / 4;
+        location += tpf * 0.01;
+        rotation += FastMath.TWO_PI * tpf / 4;
     }
 
     @Override
