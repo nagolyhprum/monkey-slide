@@ -1,33 +1,57 @@
 package mygame;
 
-import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
-import com.jme3.math.ColorRGBA;
+import com.jme3.math.FastMath;
 import com.jme3.math.Matrix3f;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Cylinder;
+import com.jme3.scene.shape.Sphere;
+import java.util.Random;
 
-public class Spline {
+public class BezierCurve extends Node {
 
     private static final float ADD_WEIGHT = 0.01f, RADIUS = 1;
+    private Vector3f start, controlA, controlB, end;
 
-    public static void addSpline(AssetManager am, Node node, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
-        float weight = 0;
-        Material red = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
-        red.setColor("Diffuse", ColorRGBA.White);
-        red.setColor("Ambient", ColorRGBA.Red);
-        red.setBoolean("UseMaterialColors", true);
-        while (weight < 1) {
-            Vector3f a = getCubic(start, controlA, controlB, end, weight - ADD_WEIGHT),
-                    b = getCubic(start, controlA, controlB, end, weight + ADD_WEIGHT);
+    public BezierCurve(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
+        this.start = start;
+        this.controlA = controlA;
+        this.controlB = controlB;
+        this.end = end;
+        addSpline(mat, this, start, controlA, controlB, end);
+    }
+
+    public Vector3f getDirection(float weight) {
+        return getDirection(start, controlA, controlB, end, weight);
+    }
+
+    public Vector3f getLocation(float weight) {
+        return getCubic(start, controlA, controlB, end, weight);
+    }
+
+    public static void addSpline(Material mat, Node node, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
+        int overdo = 5;
+        float weight = ADD_WEIGHT * overdo;
+        while (weight < 1 - ADD_WEIGHT * overdo) {
+            Vector3f a = getCubic(start, controlA, controlB, end, weight - ADD_WEIGHT * overdo),
+                    b = getCubic(start, controlA, controlB, end, weight + ADD_WEIGHT * overdo);
             Geometry g = new Geometry("slide", new Cylinder(36, 36, RADIUS, 1, false));
-            g.setMaterial(red);
+            g.setMaterial(mat);
             setConnectiveTransform(new float[]{a.x, a.y, a.z}, new float[]{b.x, b.y, b.z}, g);
             node.attachChild(g);
             weight = weight + ADD_WEIGHT;
         }
+        Geometry s = new Geometry("start", new Sphere(32, 32, RADIUS));
+        s.setLocalTranslation(start);
+        s.setMaterial(mat);
+        node.attachChild(s);
+        s = new Geometry("end", new Sphere(32, 32, RADIUS));
+        s.setLocalTranslation(end);
+        s.setMaterial(mat);
+        node.attachChild(s);
     }
 
     public static Vector3f getDirection(Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end, float weight) {
@@ -67,5 +91,16 @@ public class Spline {
         // 4. translation
         float[] center = {(p1[0] + p2[0]) / 2f, (p1[1] + p2[1]) / 2f, (p1[2] + p2[2]) / 2f};
         c.setLocalTranslation(center[0], center[1], center[2]);
+    }
+
+    public static Vector3f generateLandmark(Vector3f min, Random random) {
+        return new Vector3f(min.x + (random.nextFloat() - 0.5f) * 20, min.y + (random.nextFloat() - 0.5f) * 20, min.z + 10);
+    }
+
+    public static Vector3f generateDirection(Random random) {
+        Quaternion rot = new Quaternion();
+        rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.HALF_PI * 2 * (random.nextFloat() - 0.5f), Vector3f.UNIT_Y));
+        rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.HALF_PI * 2 * (random.nextFloat() - 0.5f), Vector3f.UNIT_X));
+        return rot.mult(new Vector3f(0, 0, 1));
     }
 }

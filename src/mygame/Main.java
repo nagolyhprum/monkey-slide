@@ -14,15 +14,17 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.system.AppSettings;
+import java.util.ArrayList;
+import java.util.Random;
 
 public class Main extends SimpleApplication {
 
-    Vector3f start = new Vector3f(0, 0, 0),
-            controlA = new Vector3f(5, 10, 5),
-            controlB = new Vector3f(5, 10, 10),
-            end = new Vector3f(0, 0, 15);
-    float location = 0, rotation = 0;
-    Node character;
+    private ArrayList<BezierCurve> slides;
+    private float location = 0, rotation = 0;
+    private Node character;
+    private Vector3f lastEnd, lastDirection;
+    private Random random;
+    private int index;
 
     public static void main(String[] args) {
         Main app = new Main();
@@ -36,43 +38,80 @@ public class Main extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
+        //simple initialization
+        random = new Random();
+        slides = new ArrayList<BezierCurve>();
+        lastEnd = Vector3f.ZERO;
+        lastDirection = BezierCurve.generateDirection(random);
+        //set up the camera
         flyCam.setDragToRotate(true);
+        flyCam.setMoveSpeed(20);
+        //add ambient light
         AmbientLight ambient = new AmbientLight();
         ambient.setColor(ColorRGBA.White);
         rootNode.addLight(ambient);
+        //add sunlight
         DirectionalLight sun = new DirectionalLight();
         sun.setDirection((new Vector3f(-0.5f, -0.5f, -0.5f)).normalizeLocal());
         sun.setColor(ColorRGBA.White);
         rootNode.addLight(sun);
-        flyCam.setMoveSpeed(20);
-        Spline.addSpline(assetManager, rootNode, start, controlA, controlB, end);
-
+        //create the character
         character = new Node();
-
-        Geometry cylinder = new Geometry("character", new Cylinder(32, 32, 1, 2, true));
-        Material blue = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        blue.setColor("Diffuse", ColorRGBA.White);
-        blue.setColor("Ambient", ColorRGBA.Blue);
-        blue.setBoolean("UseMaterialColors", true);
-        cylinder.setMaterial(blue);
-
-        cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
-        cylinder.setLocalTranslation(0, 2, 0);
-
+        /*
+         Geometry cylinder = new Geometry("character", new Cylinder(32, 32, 1, 2, true));
+         Material blue = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+         blue.setColor("Diffuse", ColorRGBA.White);
+         blue.setColor("Ambient", ColorRGBA.Blue);
+         blue.setBoolean("UseMaterialColors", true);
+         cylinder.setMaterial(blue);
+         cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
+         cylinder.setLocalTranslation(0, 2, 0);
+         */
         Spatial oto = assetManager.loadModel("Models/Oto/Oto.mesh.xml");
         oto.setLocalTranslation(0, 2, 0);
         oto.scale(0.25f);
-
         character.attachChild(oto);
-
         rootNode.attachChild(character);
 
+
+
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+        generateSlide(random);
+
+        for (int i = 1; i < slides.size(); i++) {
+            System.out.println(slides.get(i - 1).getDirection(1).subtract(slides.get(i).getDirection(0)));
+        }
+    }
+
+    public void generateSlide(Random random) {
+        Material color = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        color.setColor("Diffuse", ColorRGBA.White);
+        color.setColor("Ambient", ColorRGBA.randomColor());
+        color.setBoolean("UseMaterialColors", true);
+        Vector3f end = BezierCurve.generateLandmark(lastEnd, random),
+                direction = BezierCurve.generateDirection(random);
+        BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
+        slides.add(bc);
+        rootNode.attachChild(bc);
+
+        lastEnd = end;
+        lastDirection = direction;
     }
 
     @Override
     public void simpleUpdate(float tpf) {
-        Vector3f l = Spline.getCubic(start, controlA, controlB, end, location),
-                d = Spline.getDirection(start, controlA, controlB, end, location);
+        BezierCurve bc = slides.get(index);
+        Vector3f l = bc.getLocation(location), d = bc.getDirection(location);
         float xrot = FastMath.atan(d.y / d.z);
         float yrot = FastMath.atan(d.x / d.z);
         Quaternion rot = new Quaternion();
@@ -81,8 +120,14 @@ public class Main extends SimpleApplication {
         rot = rot.mult(new Quaternion().fromAngleAxis(yrot, Vector3f.UNIT_Y));
         character.setLocalRotation(rot);
         character.setLocalTranslation(l);
-        location += tpf * 0.01;
-        rotation += FastMath.TWO_PI * tpf / 4;
+        //location += tpf * 0.1;
+        //rotation += FastMath.TWO_PI * tpf / 4;
+
+        if (location >= 1) {
+            generateSlide(random);
+            index++;
+            location -= 1;
+        }
     }
 
     @Override
