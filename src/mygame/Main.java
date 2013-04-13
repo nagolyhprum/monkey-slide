@@ -1,6 +1,11 @@
 package mygame;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.input.InputManager;
+import com.jme3.input.KeyInput;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.AnalogListener;
+import com.jme3.input.controls.KeyTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
@@ -9,19 +14,21 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.RenderManager;
+import com.jme3.scene.CameraNode;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
+import com.jme3.scene.control.CameraControl.ControlDirection;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.system.AppSettings;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Main extends SimpleApplication {
+public class Main extends SimpleApplication implements AnalogListener {
 
     private ArrayList<BezierCurve> slides;
     private float location = 0, rotation = 0;
-    private Node character;
+    private Node path, oto;
     private Vector3f lastEnd, lastDirection;
     private Random random;
     private int index;
@@ -56,7 +63,7 @@ public class Main extends SimpleApplication {
         sun.setColor(ColorRGBA.White);
         rootNode.addLight(sun);
         //create the character
-        character = new Node();
+        path = new Node();
         /*
          Geometry cylinder = new Geometry("character", new Cylinder(32, 32, 1, 2, true));
          Material blue = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
@@ -67,30 +74,40 @@ public class Main extends SimpleApplication {
          cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
          cylinder.setLocalTranslation(0, 2, 0);
          */
-        Spatial oto = assetManager.loadModel("Models/Oto/Oto.mesh.xml");
+        oto = new Node();
+        oto.attachChild(assetManager.loadModel("Models/Oto/Oto.mesh.xml"));
         oto.setLocalTranslation(0, 2, 0);
         oto.scale(0.25f);
-        character.attachChild(oto);
-        rootNode.attachChild(character);
+        path.attachChild(oto);
+        rootNode.attachChild(path);
 
 
 
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
-        generateSlide(random);
         generateSlide(random);
         generateSlide(random);
 
         for (int i = 1; i < slides.size(); i++) {
             System.out.println(slides.get(i - 1).getDirection(1).subtract(slides.get(i).getDirection(0)));
         }
+
+        // Disable the default flyby cam
+        flyCam.setEnabled(false);
+        //create the camera Node
+        CameraNode camNode = new CameraNode("Camera Node", cam);
+        //This mode means that camera copies the movements of the target:
+        camNode.setControlDir(ControlDirection.SpatialToCamera);
+        //Attach the camNode to the target:
+        oto.attachChild(camNode);
+        //Move camNode, e.g. behind and above the target:
+        camNode.setLocalTranslation(new Vector3f(0, 10, -20));
+        //Rotate the camNode to look at the target:
+        camNode.lookAt(oto.getLocalTranslation(), Vector3f.UNIT_Y);
+
+        InputManager im = getInputManager();
+        im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_A));
+        im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_D));
+        im.addMapping("duck", new KeyTrigger(KeyInput.KEY_S));
+        im.addListener(this, "clockwise", "counterclockwise", "duck");
     }
 
     public void generateSlide(Random random) {
@@ -112,18 +129,21 @@ public class Main extends SimpleApplication {
     public void simpleUpdate(float tpf) {
         BezierCurve bc = slides.get(index);
         Vector3f l = bc.getLocation(location), d = bc.getDirection(location);
+
+
         float xrot = FastMath.atan(d.y / d.z);
         float yrot = FastMath.atan(d.x / d.z);
         Quaternion rot = new Quaternion();
-        rot = rot.mult(new Quaternion().fromAngleAxis(rotation, d));
+        rot = rot.mult(new Quaternion().fromAngleAxis(-rotation, d));
         rot = rot.mult(new Quaternion().fromAngleAxis(-xrot, Vector3f.UNIT_X));
         rot = rot.mult(new Quaternion().fromAngleAxis(yrot, Vector3f.UNIT_Y));
-        character.setLocalRotation(rot);
-        character.setLocalTranslation(l);
-        //location += tpf * 0.1;
-        //rotation += FastMath.TWO_PI * tpf / 4;
+        path.setLocalRotation(rot);
+        path.setLocalTranslation(l);
+        location += tpf * 0.5;
 
-        if (location >= 1) {
+
+
+        while (location >= 1) {
             generateSlide(random);
             index++;
             location -= 1;
@@ -132,5 +152,16 @@ public class Main extends SimpleApplication {
 
     @Override
     public void simpleRender(RenderManager rm) {
+    }
+
+    public void onAnalog(String name, float value, float tpf) {
+        if ("clockwise".equals(name)) {
+            rotation += FastMath.TWO_PI * tpf / 4;
+        } else if ("counterclockwise".equals(name)) {
+            rotation -= FastMath.TWO_PI * tpf / 4;
+        } else if ("jump".equals(name)) {
+        } else if ("duck".equals(name)) {
+            oto.scale(0.5f);
+        }
     }
 }

@@ -13,7 +13,7 @@ import java.util.Random;
 
 public class BezierCurve extends Node {
 
-    private static final float ADD_WEIGHT = 0.01f, RADIUS = 1;
+    private static final float ADD_WEIGHT = 0.05f, RADIUS = 1;
     private Vector3f start, controlA, controlB, end;
 
     public BezierCurve(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
@@ -55,7 +55,7 @@ public class BezierCurve extends Node {
     }
 
     public static Vector3f getDirection(Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end, float weight) {
-        Vector3f s = getCubic(start, controlA, controlB, end, weight),
+        Vector3f s = getCubic(start, controlA, controlB, end, weight - ADD_WEIGHT),
                 e = getCubic(start, controlA, controlB, end, weight + ADD_WEIGHT);
         return e.subtract(s).normalize();
     }
@@ -99,8 +99,8 @@ public class BezierCurve extends Node {
 
     public static Vector3f generateDirection(Random random) {
         Quaternion rot = new Quaternion();
-        rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.HALF_PI * 2 * (random.nextFloat() - 0.5f), Vector3f.UNIT_Y));
-        rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.HALF_PI * 2 * (random.nextFloat() - 0.5f), Vector3f.UNIT_X));
-        return rot.mult(new Vector3f(0, 0, 1));
+        rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.HALF_PI * (random.nextFloat() - 0.5f) * 2, Vector3f.UNIT_Y));
+        rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.HALF_PI * (random.nextFloat() - 0.5f) * 2, Vector3f.UNIT_X));
+        return rot.mult(new Vector3f(0, 0, 0.3f));
     }
 }
