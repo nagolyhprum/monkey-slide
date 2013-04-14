@@ -24,7 +24,7 @@ import com.jme3.system.AppSettings;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Main extends SimpleApplication implements AnalogListener {
+public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
     private ArrayList<BezierCurve> slides;
     private float location = 0, rotation = 0;
@@ -32,6 +32,10 @@ public class Main extends SimpleApplication implements AnalogListener {
     private Vector3f lastEnd, lastDirection;
     private Random random;
     private int index;
+    private float y, vy;
+    private static final float STANDING_Y = 2, DUCKING_Y = 2;
+    private static final float STANDING_SCALE = 0.25f, DUCKING_SCALE = 0.125f;
+    private boolean isDucking;
 
     public static void main(String[] args) {
         Main app = new Main();
@@ -49,7 +53,7 @@ public class Main extends SimpleApplication implements AnalogListener {
         random = new Random();
         slides = new ArrayList<BezierCurve>();
         lastEnd = Vector3f.ZERO;
-        lastDirection = BezierCurve.generateDirection(random);
+        lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //set up the camera
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(20);
@@ -76,8 +80,6 @@ public class Main extends SimpleApplication implements AnalogListener {
          */
         oto = new Node();
         oto.attachChild(assetManager.loadModel("Models/Oto/Oto.mesh.xml"));
-        oto.setLocalTranslation(0, 2, 0);
-        oto.scale(0.25f);
         path.attachChild(oto);
         rootNode.attachChild(path);
 
@@ -107,7 +109,9 @@ public class Main extends SimpleApplication implements AnalogListener {
         im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_A));
         im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_D));
         im.addMapping("duck", new KeyTrigger(KeyInput.KEY_S));
-        im.addListener(this, "clockwise", "counterclockwise", "duck");
+        im.addMapping("jump", new KeyTrigger(KeyInput.KEY_SPACE));
+        im.addListener(this, "clockwise", "counterclockwise");
+        im.addListener(this, "duck", "jump");
     }
 
     public void generateSlide(Random random) {
@@ -116,7 +120,7 @@ public class Main extends SimpleApplication implements AnalogListener {
         color.setColor("Ambient", ColorRGBA.randomColor());
         color.setBoolean("UseMaterialColors", true);
         Vector3f end = BezierCurve.generateLandmark(lastEnd, random),
-                direction = BezierCurve.generateDirection(random);
+                direction = BezierCurve.generateDirection(random, lastDirection);
         BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
         slides.add(bc);
         rootNode.attachChild(bc);
@@ -127,6 +131,24 @@ public class Main extends SimpleApplication implements AnalogListener {
 
     @Override
     public void simpleUpdate(float tpf) {
+        oto.setLocalTranslation(0, STANDING_Y + y, 0);
+        if (vy != 0) {
+            y += vy;
+            vy -= tpf * 4;
+            if (y <= 0) {
+                y = 0;
+                vy = 0;
+            }
+        }
+
+        if (isDucking) {
+            oto.setLocalScale(DUCKING_SCALE);
+            oto.setLocalTranslation(0, DUCKING_Y, 0);
+        } else {
+            oto.setLocalScale(STANDING_SCALE);
+            oto.setLocalTranslation(0, STANDING_Y + y, 0);
+        }
+
         BezierCurve bc = slides.get(index);
         Vector3f l = bc.getLocation(location), d = bc.getDirection(location);
 
@@ -140,9 +162,6 @@ public class Main extends SimpleApplication implements AnalogListener {
         path.setLocalRotation(rot);
         path.setLocalTranslation(l);
         location += tpf * 0.5;
-
-
-
         while (location >= 1) {
             generateSlide(random);
             index++;
@@ -159,9 +178,16 @@ public class Main extends SimpleApplication implements AnalogListener {
             rotation += FastMath.TWO_PI * tpf / 4;
         } else if ("counterclockwise".equals(name)) {
             rotation -= FastMath.TWO_PI * tpf / 4;
-        } else if ("jump".equals(name)) {
-        } else if ("duck".equals(name)) {
-            oto.scale(0.5f);
+        }
+    }
+
+    public void onAction(String name, boolean keyPressed, float tpf) {
+        if ("duck".equals(name) && vy == 0) {
+            isDucking = keyPressed;
+        } else if ("jump".equals(name) && keyPressed) {
+            if (vy == 0 && !isDucking) {
+                vy = 1;
+            }
         }
     }
 }
