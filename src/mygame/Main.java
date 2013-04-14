@@ -21,6 +21,7 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.control.CameraControl.ControlDirection;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.system.AppSettings;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -124,9 +125,20 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
         slides.add(bc);
         rootNode.attachChild(bc);
-
         lastEnd = end;
         lastDirection = direction;
+        if ((slides.size() + 1) % 3 == 0) {
+            Class[] clazzez = Trap.class.getDeclaredClasses();
+            Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
+            try {
+                Constructor constructor = clazz.getConstructor(Material.class);
+                Node node = (Node) constructor.newInstance(color);
+                putItHere(node, bc, FastMath.rand.nextFloat(), FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                rootNode.attachChild(node);
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+        }
     }
 
     @Override
@@ -134,7 +146,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         oto.setLocalTranslation(0, STANDING_Y + y, 0);
         if (vy != 0) {
             y += vy;
-            vy -= tpf * 4;
+            vy -= tpf * 3;
             if (y <= 0) {
                 y = 0;
                 vy = 0;
@@ -149,24 +161,25 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             oto.setLocalTranslation(0, STANDING_Y + y, 0);
         }
 
-        BezierCurve bc = slides.get(index);
-        Vector3f l = bc.getLocation(location), d = bc.getDirection(location);
+        putItHere(path, slides.get(index), location, rotation);
+        location += tpf * 0.75;
+        while (location >= 1) {
+            generateSlide(random);
+            index++;
+            location -= 1;
+        }
+    }
 
-
+    public static void putItHere(Node it, BezierCurve spline, float weight, float rotation) {
+        Vector3f l = spline.getLocation(weight), d = spline.getDirection(weight);
         float xrot = FastMath.atan(d.y / d.z);
         float yrot = FastMath.atan(d.x / d.z);
         Quaternion rot = new Quaternion();
         rot = rot.mult(new Quaternion().fromAngleAxis(-rotation, d));
         rot = rot.mult(new Quaternion().fromAngleAxis(-xrot, Vector3f.UNIT_X));
         rot = rot.mult(new Quaternion().fromAngleAxis(yrot, Vector3f.UNIT_Y));
-        path.setLocalRotation(rot);
-        path.setLocalTranslation(l);
-        location += tpf * 0.5;
-        while (location >= 1) {
-            generateSlide(random);
-            index++;
-            location -= 1;
-        }
+        it.setLocalRotation(rot);
+        it.setLocalTranslation(l);
     }
 
     @Override

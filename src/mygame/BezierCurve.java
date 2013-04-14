@@ -13,7 +13,8 @@ import java.util.Random;
 
 public class BezierCurve extends Node {
 
-    private static final float ADD_WEIGHT = 0.01f, RADIUS = 1;
+    private static final float ADD_WEIGHT = 0.01f;
+    public static final float RADIUS = 1;
     private Vector3f start, controlA, controlB, end;
 
     public BezierCurve(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
