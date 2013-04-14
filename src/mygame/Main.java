@@ -20,6 +20,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.control.CameraControl.ControlDirection;
 import com.jme3.scene.shape.Cylinder;
+import com.jme3.scene.shape.Sphere;
 import com.jme3.system.AppSettings;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -136,9 +137,26 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 putItHere(node, bc, FastMath.rand.nextFloat(), FastMath.rand.nextFloat() * FastMath.TWO_PI);
                 rootNode.attachChild(node);
             } catch (Exception e) {
-                System.out.println(e);
+                System.exit(1);
             }
+        } else if (slides.size() > 1) {
+            addCoins(rootNode, bc, color);
         }
+    }
+
+    public static void addCoins(Node root, BezierCurve bc, Material mat) {
+        float start = FastMath.TWO_PI * FastMath.rand.nextFloat(),
+                progress = FastMath.TWO_PI * FastMath.rand.nextFloat();
+        for (float i = 0.1f; i <= 0.9; i += 0.05) {
+            Geometry coin = new Geometry("coin", new Sphere(32, 32, 0.1f));
+            coin.setLocalTranslation(0, BezierCurve.RADIUS + 0.1f, 0);
+            coin.setMaterial(mat);
+            Node node = new Node();
+            node.attachChild(coin);
+            root.attachChild(node);
+            putItHere(node, bc, i, start + progress * i);
+        }
+
     }
 
     @Override
@@ -162,7 +180,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         }
 
         putItHere(path, slides.get(index), location, rotation);
-        location += tpf * 0.75;
+        location += tpf * 0.5;
         while (location >= 1) {
             generateSlide(random);
             index++;
@@ -170,7 +188,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         }
     }
 
-    public static void putItHere(Node it, BezierCurve spline, float weight, float rotation) {
+    public static void putItHere(Spatial it, BezierCurve spline, float weight, float rotation) {
         Vector3f l = spline.getLocation(weight), d = spline.getDirection(weight);
         float xrot = FastMath.atan(d.y / d.z);
         float yrot = FastMath.atan(d.x / d.z);

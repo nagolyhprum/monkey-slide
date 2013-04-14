@@ -24,8 +24,8 @@ public class Trap extends Node {
     public static class Duck extends Trap {
 
         public Duck(Material mat) {
-            Geometry geo = new Geometry("trap", new Torus(32, 32, 1, 2));
-            geo.scale(2.5f);
+            Geometry geo = new Geometry("trap", new Torus(32, 32, BezierCurve.RADIUS, BezierCurve.RADIUS + 1));
+            geo.scale(2.5f, 2.5f, 1);
             geo.setMaterial(mat);
             attachChild(geo);
         }
@@ -34,9 +34,10 @@ public class Trap extends Node {
     public static class Dodge extends Trap {
 
         public Dodge(Material mat) {
-            Geometry geo = new Geometry("trap", new Cylinder(32, 32, BezierCurve.RADIUS, 2, true));
+            float height = 5;
+            Geometry geo = new Geometry("trap", new Cylinder(32, 32, BezierCurve.RADIUS, height, true));
             geo.setMaterial(mat);
-            geo.setLocalTranslation(0, BezierCurve.RADIUS, 0);
+            geo.setLocalTranslation(0, height / 2, 0);
             geo.rotate(FastMath.HALF_PI, 0, 0);
             attachChild(geo);
         }
