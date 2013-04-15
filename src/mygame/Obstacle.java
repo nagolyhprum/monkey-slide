@@ -2,16 +2,14 @@ package mygame;
 
 import com.jme3.material.Material;
 import com.jme3.math.FastMath;
-import com.jme3.math.Quaternion;
-import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.scene.shape.Torus;
 
-public class Trap extends Node {
+public class Obstacle extends Node {
 
-    public static class Jump extends Trap {
+    public static class Jump extends Obstacle {
 
         public Jump(Material mat) {
             Geometry geo = new Geometry("trap", new Cylinder(32, 32, BezierCurve.RADIUS + 1, 1, true));
@@ -21,7 +19,7 @@ public class Trap extends Node {
         }
     }
 
-    public static class Duck extends Trap {
+    public static class Duck extends Obstacle {
 
         public Duck(Material mat) {
             Geometry geo = new Geometry("trap", new Torus(32, 32, BezierCurve.RADIUS, BezierCurve.RADIUS + 1));
@@ -31,7 +29,7 @@ public class Trap extends Node {
         }
     }
 
-    public static class Dodge extends Trap {
+    public static class Dodge extends Obstacle {
 
         public Dodge(Material mat) {
             float height = 5;

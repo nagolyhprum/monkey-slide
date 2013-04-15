@@ -13,8 +13,11 @@ import java.util.Random;
 
 public class BezierCurve extends Node {
 
+    //how much to step when generating bezier curves
     private static final float ADD_WEIGHT = 0.01f;
+    //the radius of the spline to generate
     public static final float RADIUS = 1;
+    //instance of spline points
     private Vector3f start, controlA, controlB, end;
 
     public BezierCurve(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
@@ -33,6 +36,15 @@ public class BezierCurve extends Node {
         return getCubic(start, controlA, controlB, end, weight);
     }
 
+    /**
+     *
+     * @param mat colored spline
+     * @param node to attach the spline to
+     * @param start position of the spline
+     * @param controlA smoothness factor
+     * @param controlB smoothness factor
+     * @param end position of the spline
+     */
     public static void addSpline(Material mat, Node node, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
         int overdo = 5;
         float weight = ADD_WEIGHT * overdo;
@@ -66,6 +78,14 @@ public class BezierCurve extends Node {
         return new Vector3f(a.x * (1 - weight) + b.x * weight, a.y * (1 - weight) + b.y * weight, a.z * (1 - weight) + b.z * weight);
     }
 
+    /**
+     *
+     * @param start where to start the spline
+     * @param control determines the smoothness factor of the spline
+     * @param end where the spline ends
+     * @param weight where on the spline
+     * @return the location of the weight on the spline
+     */
     private static Vector3f getQuadratic(Vector3f start, Vector3f control, Vector3f end, float weight) {
         float x1 = start.x + (control.x - start.x) * weight,
                 y1 = start.y + (control.y - start.y) * weight,
@@ -74,7 +94,6 @@ public class BezierCurve extends Node {
                 y2 = control.y + (end.y - control.y) * weight,
                 z2 = control.z + (end.z - control.z) * weight;
         return new Vector3f(x1 * (1 - weight) + x2 * weight, y1 * (1 - weight) + y2 * weight, z1 * (1 - weight) + z2 * weight);
-
     }
 
     private static void setConnectiveTransform(float[] p1, float[] p2, Geometry c) {
