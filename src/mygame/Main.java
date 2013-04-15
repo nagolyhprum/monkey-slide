@@ -37,13 +37,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             //the rate of change for the characters y offset
             vy;
     //the y coordinate when the character is standing
-    private static final float STANDING_Y = 2,
+    private static final float STANDING_Y = 1,
             //the y coordinate when the character is ducking
-            DUCKING_Y = 2;
+            DUCKING_Y = 1;
     //the scale when the character is standing
-    private static final float STANDING_SCALE = 0.25f,
+    private static final float STANDING_SCALE = 1,
             //the scale when the character is ducking
-            DUCKING_SCALE = 0.125f;
+            DUCKING_SCALE = 0.5f;
     //is the character ducking?
     private boolean isDucking;
 
@@ -77,24 +77,21 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rootNode.addLight(sun);
         //create the character
         path = new Node();
-        Geometry cylinder = new Geometry("character", new Cylinder(32, 32, 1, 2, true));
+        Geometry cylinder = new Geometry("character", new Cylinder(32, 32, BezierCurve.RADIUS / 2, 2, true));
         Material blue = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         blue.setColor("Diffuse", ColorRGBA.White);
         blue.setColor("Ambient", ColorRGBA.Blue);
         blue.setBoolean("UseMaterialColors", true);
         cylinder.setMaterial(blue);
         cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
-        cylinder.setLocalTranslation(0, 2, 0);
+        cylinder.setLocalTranslation(0, BezierCurve.RADIUS, 0);
         character = new Node();
         character.attachChild(cylinder);
         path.attachChild(character);
         rootNode.attachChild(path);
-
-
-
+        //generate the slides
         generateSlide(random);
         generateSlide(random);
-
         //set up the camera
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(20);
