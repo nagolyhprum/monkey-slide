@@ -14,7 +14,7 @@ import java.util.Random;
 public class BezierCurve extends Node {
 
     //how much to step when generating bezier curves
-    private static final float ADD_WEIGHT = 0.01f;
+    private static final float ADD_WEIGHT = 0.02f;
     //the radius of the spline to generate
     public static final float RADIUS = 1;
     //instance of spline points

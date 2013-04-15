@@ -13,8 +13,11 @@ import com.jme3.system.AppSettings;
 import java.util.*;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
-    //these are all of the slides in memory
 
+    public int experienced;
+    //how fast the character rotates
+    public static final float TURN_SPEED = FastMath.TWO_PI / 4;
+    //these are all of the slides in memory
     private ArrayList<BezierCurve> slides;
     //where is the character on the slide
     private float location = 0,
@@ -90,8 +93,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         path.attachChild(character);
         rootNode.attachChild(path);
         //generate the slides
-        generateSlide(random);
-        generateSlide(random);
+        generateSlide(random, 10);
         //set up the camera
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(20);
@@ -121,50 +123,52 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      *
      * @param random number generator used when generating the next slide
      */
-    public void generateSlide(Random random) {
-        //set up the material for this whole section
-        Material color = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        color.setColor("Diffuse", ColorRGBA.White);
-        color.setColor("Ambient", ColorRGBA.randomColor());
-        color.setBoolean("UseMaterialColors", true);
-        //figure out how to set up the bezier curve
-        Vector3f end = BezierCurve.generateLandmark(lastEnd, random),
-                direction = BezierCurve.generateDirection(random, lastDirection);
-        //create the bezier curve
-        BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
-        //add the bezier curve to the scene and list
-        slides.add(bc);
-        rootNode.attachChild(bc);
-        //this is the new ending location and direction
-        lastEnd = end;
-        lastDirection = direction;
-        if ((slides.size() + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
-            //get all of the declared obstacles (i did this because i am lazy)
-            Class[] clazzez = Obstacle.class.getDeclaredClasses();
-            Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
-            try {
-                //create and place the obstacle
-                Node node = (Node) clazz.getConstructor(Material.class).newInstance(color);
-                putItHere(node, bc, FastMath.rand.nextFloat(), FastMath.rand.nextFloat() * FastMath.TWO_PI);
-                rootNode.attachChild(node);
-            } catch (Exception e) {
-                System.exit(1);
+    public void generateSlide(Random random, int count) {
+        for (int i = 0; i < count; i++) {
+            //set up the material for this whole section
+            Material color = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+            color.setColor("Diffuse", ColorRGBA.White);
+            color.setColor("Ambient", ColorRGBA.randomColor());
+            color.setBoolean("UseMaterialColors", true);
+            //figure out how to set up the bezier curve
+            Vector3f end = BezierCurve.generateLandmark(lastEnd, random),
+                    direction = BezierCurve.generateDirection(random, lastDirection);
+            //create the bezier curve
+            BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
+            //add the bezier curve to the scene and list
+            slides.add(bc);
+            rootNode.attachChild(bc);
+            //this is the new ending location and direction
+            lastEnd = end;
+            lastDirection = direction;
+            if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
+                //get all of the declared obstacles (i did this because i am lazy)
+                Class[] clazzez = Obstacle.class.getDeclaredClasses();
+                Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
+                try {
+                    //create and place the obstacle
+                    Node node = (Node) clazz.getConstructor(Material.class).newInstance(color);
+                    putItHere(node, bc, FastMath.rand.nextFloat(), FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                    bc.attachChild(node);
+                } catch (Exception e) {
+                    System.exit(1);
+                }
+            } else if (slides.size() > 1) { //if this is not the first slide or a slide with obstacles           
+                addCoins(bc, color); //then add coins to it
             }
-        } else if (slides.size() > 1) { //if this is not the first slide or a slide with obstacles           
-            addCoins(rootNode, bc, color); //then add coins to it
         }
     }
 
     /**
-     * Adds mat colored coins to root which follow the path of the bc
+     * Adds mat colored coins to bc which follow the path of the bc
      *
      * @param root node to add the coins to
      * @param bc the bezier curve that the coins should follow
      * @param mat the material to be used for the coins
      */
-    public static void addCoins(Node root, BezierCurve bc, Material mat) {
+    public static void addCoins(BezierCurve bc, Material mat) {
         //which rotation do we start
-        float start = FastMath.TWO_PI * FastMath.rand.nextFloat(),
+        float start = TURN_SPEED * FastMath.rand.nextFloat(),
                 //how fast does the rotation go?
                 progress = FastMath.TWO_PI * FastMath.rand.nextFloat();
         //add coins to certain locations
@@ -175,7 +179,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             coin.setMaterial(mat);
             Node node = new Node();
             node.attachChild(coin);
-            root.attachChild(node);
+            bc.attachChild(node);
             //place the coin
             putItHere(node, bc, i, start + progress * i);
         }
@@ -192,7 +196,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             character.setLocalScale(STANDING_SCALE);
             character.setLocalTranslation(0, STANDING_Y + y, 0);
         }
-        putItHere(path, slides.get(index), location, rotation);
+        if (!slides.isEmpty()) {
+            putItHere(path, slides.get(index), location, rotation);
+        }
         //update the orientation of your character
         if (vy != 0) {
             vy -= tpf * 3;
@@ -204,9 +210,15 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         }
         location += tpf * 0.5;
         while (location >= 1) {
-            generateSlide(random);
-            index++;
+            generateSlide(random, 1);
             location -= 1;
+            experienced++;
+            if (slides.size() > 15) {
+                rootNode.detachChild(slides.get(0));
+                slides.remove(0);
+            } else {
+                index++;
+            }
         }
     }
 
@@ -236,9 +248,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     public void onAnalog(String name, float value, float tpf) {
         if ("clockwise".equals(name)) {
-            rotation += FastMath.TWO_PI * tpf / 4;
+            rotation += TURN_SPEED * tpf;
         } else if ("counterclockwise".equals(name)) {
-            rotation -= FastMath.TWO_PI * tpf / 4;
+            rotation -= TURN_SPEED * tpf;
         }
     }
 
