@@ -10,6 +10,7 @@ import com.jme3.scene.*;
 import com.jme3.scene.control.CameraControl.ControlDirection;
 import com.jme3.scene.shape.*;
 import com.jme3.system.AppSettings;
+import com.jme3.texture.Texture;
 import java.util.*;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
@@ -80,16 +81,18 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rootNode.addLight(sun);
         //create the character
         path = new Node();
-        Geometry cylinder = new Geometry("character", new Cylinder(32, 32, BezierCurve.RADIUS / 2, 2, true));
-        Material blue = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        blue.setColor("Diffuse", ColorRGBA.White);
-        blue.setColor("Ambient", ColorRGBA.Blue);
-        blue.setBoolean("UseMaterialColors", true);
-        cylinder.setMaterial(blue);
-        cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
-        cylinder.setLocalTranslation(0, BezierCurve.RADIUS, 0);
+        /*
+         Geometry cylinder = new Geometry("character", new Cylinder(32, 32, BezierCurve.RADIUS / 2, 2, true));
+         Material blue = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+         blue.setColor("Diffuse", ColorRGBA.White);
+         blue.setColor("Ambient", ColorRGBA.Blue);
+         blue.setBoolean("UseMaterialColors", true);
+         cylinder.setMaterial(blue);
+         cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
+         cylinder.setLocalTranslation(0, BezierCurve.RADIUS, 0);
+         */
         character = new Node();
-        character.attachChild(cylinder);
+        character.attachChild(assetManager.loadModel("Models/car/_car_04.j3o"));
         path.attachChild(character);
         rootNode.attachChild(path);
         //generate the slides
@@ -126,10 +129,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public void generateSlide(Random random, int count) {
         for (int i = 0; i < count; i++) {
             //set up the material for this whole section
-            Material color = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-            color.setColor("Diffuse", ColorRGBA.White);
-            color.setColor("Ambient", ColorRGBA.randomColor());
-            color.setBoolean("UseMaterialColors", true);
+            Material color = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+            Texture texture = assetManager.loadTexture("Textures/road.jpg");
+            color.setTexture("ColorMap", texture);
+            //color.setColor("Diffuse", ColorRGBA.White);
+            //color.setColor("Ambient", ColorRGBA.randomColor());
+            //color.setBoolean("UseMaterialColors", true);
             //figure out how to set up the bezier curve
             Vector3f end = BezierCurve.generateLandmark(lastEnd, random),
                     direction = BezierCurve.generateDirection(random, lastDirection);
