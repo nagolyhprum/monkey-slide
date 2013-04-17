@@ -1,6 +1,8 @@
 package mygame;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.bounding.BoundingBox;
+import com.jme3.collision.CollisionResults;
 import com.jme3.input.*;
 import com.jme3.input.controls.*;
 import com.jme3.light.*;
@@ -8,18 +10,25 @@ import com.jme3.material.Material;
 import com.jme3.math.*;
 import com.jme3.scene.*;
 import com.jme3.scene.control.CameraControl.ControlDirection;
+import com.jme3.scene.debug.WireBox;
 import com.jme3.scene.shape.*;
 import com.jme3.system.AppSettings;
-import com.jme3.texture.Texture;
 import java.util.*;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
+    //the current hover
+    private float hover;
+    //the number of splines in existance
     public int experienced;
     //how fast the character rotates
     public static final float TURN_SPEED = FastMath.TWO_PI / 4;
     //these are all of the slides in memory
     private ArrayList<BezierCurve> slides;
+    //these are the coins in memory
+    private ArrayList<ArrayList<Node>> coins;
+    //these are the obstacles in memory
+    private ArrayList<ArrayList<Node>> obstacles;
     //where is the character on the slide
     private float location = 0,
             //what is the characters rotation on the slide
@@ -27,40 +36,56 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the parent node of the character
     private Node path,
             //this node only contains the camera and the character
-            character;
+            characterNode,
+            characterModel;
     //the is where the last spline ends
     private Vector3f lastEnd,
             //this is the direction the last spline ends in
             lastDirection;
     //this is the random number generator used to generate the splines
     private Random random;
-    //this is the spline we are currently at
-    private int index;
     //the current y offset of the character
-    private float y,
-            //the rate of change for the characters y offset
-            vy;
+    private float y;
     //the y coordinate when the character is standing
-    private static final float STANDING_Y = 1,
-            //the y coordinate when the character is ducking
-            DUCKING_Y = 1;
+    private static final float STANDING_Y = 2,
+            //the amount to decrease from standing
+            DUCKING_Y = 0.75f,
+            //the amount to increase from standing
+            JUMPING_Y = 0.75f;
     //the scale when the character is standing
-    private static final float STANDING_SCALE = 1,
-            //the scale when the character is ducking
-            DUCKING_SCALE = 0.5f;
+    private static final float SCALE = 0.25f;
     //is the character ducking?
-    private boolean isDucking;
+    private boolean isDucking, isJumping;
+    private static final Main SINGLETON = new Main();
 
     public static void main(String[] args) {
-        Main app = new Main();
-        //set up the settings
         AppSettings as = new AppSettings(true);
         as.setSamples(2);
         as.setResolution(800, 600);
-        app.setSettings(as);
-        app.setShowSettings(false);
-        //start the application
-        app.start();
+        SINGLETON.setSettings(as);
+        SINGLETON.setShowSettings(false);
+        SINGLETON.start();
+    }
+
+    private Main() {
+    }
+
+    public static Main getInstance() {
+        return SINGLETON;
+    }
+
+    public void reset() {
+        for (BezierCurve bc : slides) {
+            rootNode.detachChild(bc);
+        }
+        slides.clear();
+        coins.clear();
+        obstacles.clear();
+        location = 0;
+        lastEnd = Vector3f.ZERO;
+        lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
+        //generate the slides
+        generateSlide(random, 4);
     }
 
     @Override
@@ -68,8 +93,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         //simple initialization
         random = new Random();
         slides = new ArrayList<BezierCurve>();
-        lastEnd = Vector3f.ZERO;
-        lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
+        coins = new ArrayList<ArrayList<Node>>();
+        obstacles = new ArrayList<ArrayList<Node>>();
         //add ambient light
         AmbientLight ambient = new AmbientLight();
         ambient.setColor(ColorRGBA.White);
@@ -81,22 +106,20 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rootNode.addLight(sun);
         //create the character
         path = new Node();
-        /*
-         Geometry cylinder = new Geometry("character", new Cylinder(32, 32, BezierCurve.RADIUS / 2, 2, true));
-         Material blue = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-         blue.setColor("Diffuse", ColorRGBA.White);
-         blue.setColor("Ambient", ColorRGBA.Blue);
-         blue.setBoolean("UseMaterialColors", true);
-         cylinder.setMaterial(blue);
-         cylinder.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X));
-         cylinder.setLocalTranslation(0, BezierCurve.RADIUS, 0);
-         */
-        character = new Node();
-        character.attachChild(assetManager.loadModel("Models/car/_car_04.j3o"));
-        path.attachChild(character);
+        characterModel = new Node();
+        characterNode = new Node();
+
+        Node car = (Node) assetManager.loadModel("Models/car/_car_04.j3o");
+        car.setName("car");
+        car.detachChildAt(0);
+
+        attachBB(car);
+
+        characterModel.attachChild(car);
+        characterModel.scale(SCALE);
+        characterNode.attachChild(characterModel);
+        path.attachChild(characterNode);
         rootNode.attachChild(path);
-        //generate the slides
-        generateSlide(random, 10);
         //set up the camera
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(20);
@@ -106,19 +129,31 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         //This mode means that camera copies the movements of the target:
         camNode.setControlDir(ControlDirection.SpatialToCamera);
         //Attach the camNode to the target:
-        character.attachChild(camNode);
+        characterNode.attachChild(camNode);
         //Move camNode, e.g. behind and above the target:
-        camNode.setLocalTranslation(new Vector3f(0, 10, -20));
+        camNode.setLocalTranslation(new Vector3f(0, 5, -10));
         //Rotate the camNode to look at the target:
-        camNode.lookAt(character.getLocalTranslation(), Vector3f.UNIT_Y);
+        camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
         //create key events
         InputManager im = getInputManager();
         im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_A));
         im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_D));
         im.addMapping("duck", new KeyTrigger(KeyInput.KEY_S));
-        im.addMapping("jump", new KeyTrigger(KeyInput.KEY_SPACE));
+        im.addMapping("jump", new KeyTrigger(KeyInput.KEY_W));
+        im.addMapping("reset", new KeyTrigger(KeyInput.KEY_BACKSLASH));
         im.addListener(this, "clockwise", "counterclockwise");
-        im.addListener(this, "duck", "jump");
+        im.addListener(this, "duck", "jump", "reset");
+        reset();
+    }
+
+    public void attachBB(Node node) {
+        WireBox wb = new WireBox();
+        wb.fromBoundingBox((BoundingBox) node.getWorldBound());
+        Geometry geo = new Geometry("bb", wb);
+        Material red = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        red.setColor("Color", ColorRGBA.Red);
+        geo.setMaterial(red);
+        node.attachChild(geo);
     }
 
     /**
@@ -129,12 +164,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public void generateSlide(Random random, int count) {
         for (int i = 0; i < count; i++) {
             //set up the material for this whole section
-            Material color = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-            Texture texture = assetManager.loadTexture("Textures/road.jpg");
-            color.setTexture("ColorMap", texture);
-            //color.setColor("Diffuse", ColorRGBA.White);
-            //color.setColor("Ambient", ColorRGBA.randomColor());
-            //color.setBoolean("UseMaterialColors", true);
+            Material color = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+            //Texture texture = assetManager.loadTexture("Textures/road.jpg");
+            //color.setTexture("ColorMap", texture);
+            color.setColor("Diffuse", ColorRGBA.White);
+            color.setColor("Ambient", ColorRGBA.randomColor());
+            color.setBoolean("UseMaterialColors", true);
             //figure out how to set up the bezier curve
             Vector3f end = BezierCurve.generateLandmark(lastEnd, random),
                     direction = BezierCurve.generateDirection(random, lastDirection);
@@ -146,6 +181,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             //this is the new ending location and direction
             lastEnd = end;
             lastDirection = direction;
+            ArrayList<Node> os = new ArrayList<Node>();
+            ArrayList<Node> cs = new ArrayList<Node>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez = Obstacle.class.getDeclaredClasses();
@@ -153,14 +190,18 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 try {
                     //create and place the obstacle
                     Node node = (Node) clazz.getConstructor(Material.class).newInstance(color);
-                    putItHere(node, bc, FastMath.rand.nextFloat(), FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                    putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                     bc.attachChild(node);
+                    os.add(node);
                 } catch (Exception e) {
                     System.exit(1);
                 }
             } else if (slides.size() > 1) { //if this is not the first slide or a slide with obstacles           
-                addCoins(bc, color); //then add coins to it
+                addCoins(bc, color, cs); //then add coins to it
             }
+            this.obstacles.add(os);
+            this.coins.add(cs);
+            experienced++;
         }
     }
 
@@ -171,59 +212,93 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      * @param bc the bezier curve that the coins should follow
      * @param mat the material to be used for the coins
      */
-    public static void addCoins(BezierCurve bc, Material mat) {
+    public static void addCoins(BezierCurve bc, Material mat, ArrayList<Node> coins) {
         //which rotation do we start
         float start = TURN_SPEED * FastMath.rand.nextFloat(),
                 //how fast does the rotation go?
-                progress = FastMath.TWO_PI * FastMath.rand.nextFloat();
+                progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
         //add coins to certain locations
         for (float i = 0.25f; i <= 0.75; i += 0.05) {
             //create the coin
-            Geometry coin = new Geometry("coin", new Sphere(32, 32, 0.1f));
-            coin.setLocalTranslation(0, BezierCurve.RADIUS + 0.2f, 0);
+            Geometry coin = new Geometry("coin", new Sphere(32, 32, 1f));
+            coin.scale(0.8f, 0.8f, 0.05f);
+            coin.setLocalTranslation(0, BezierCurve.RADIUS + 1f, 0);
             coin.setMaterial(mat);
             Node node = new Node();
             node.attachChild(coin);
             bc.attachChild(node);
+            coins.add(node);
             //place the coin
             putItHere(node, bc, i, start + progress * i);
+            getInstance().attachBB(node);
         }
     }
 
     @Override
     public void simpleUpdate(float tpf) {
-        //set up the orientation of the player
-        character.setLocalTranslation(0, STANDING_Y + y, 0);
+        //set up the orientation of the player        
+        hover += FastMath.PI * tpf;
         if (isDucking) {
-            character.setLocalScale(DUCKING_SCALE);
-            character.setLocalTranslation(0, DUCKING_Y, 0);
+            if (y > -DUCKING_Y) {
+                y -= tpf;
+            }
+            if (y < -DUCKING_Y) {
+                y = -DUCKING_Y;
+            }
+            characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
+        } else if (isJumping) {
+            if (y < JUMPING_Y) {
+                y += tpf;
+            }
+            if (y > JUMPING_Y) {
+                y = JUMPING_Y;
+            }
+            characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
         } else {
-            character.setLocalScale(STANDING_SCALE);
-            character.setLocalTranslation(0, STANDING_Y + y, 0);
+            float ty = this.y;
+            if (ty != 0) {
+                ty -= tpf * FastMath.abs(ty) / ty;
+            }
+            if ((FastMath.abs(ty) / ty) != (FastMath.abs(y) / y)) {
+                ty = 0;
+            }
+            y = ty;
+            characterModel.setLocalTranslation(0, STANDING_Y + y + FastMath.sin(hover) * 0.125f, 0);
         }
         if (!slides.isEmpty()) {
-            putItHere(path, slides.get(index), location, rotation);
+            putItHere(path, slides.get(1), location, rotation);
         }
-        //update the orientation of your character
-        if (vy != 0) {
-            vy -= tpf * 3;
-            y += vy;
-            if (y <= 0) {
-                y = 0;
-                vy = 0;
-            }
-        }
-        location += tpf * 0.5;
+        location += tpf * 0.25;
         while (location >= 1) {
             generateSlide(random, 1);
             location -= 1;
-            experienced++;
-            if (slides.size() > 15) {
-                rootNode.detachChild(slides.get(0));
-                slides.remove(0);
-            } else {
-                index++;
+            rootNode.detachChild(slides.get(0));
+            slides.remove(0);
+            coins.remove(0);
+            obstacles.remove(0);
+        }
+        //start colliding
+        try {
+            Spatial car = characterModel.getChild("car");
+            for (int i = 0; i < coins.get(1).size(); i++) {
+                Spatial coin = coins.get(1).get(i).getChild("coin");
+                if (car.collideWith(coin.getWorldBound(), new CollisionResults()) != 0) {
+                    System.out.println("points!");
+                    coin.getParent().removeFromParent();
+                    coins.get(1).remove(i);
+                    i--;
+                }
             }
+            for (int i = 0; i < obstacles.get(1).size(); i++) {
+                Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
+                if (car.collideWith(obstacle.getWorldBound(), new CollisionResults()) != 0) {
+                    System.out.println("dead!");
+                    reset();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
         }
     }
 
@@ -260,12 +335,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void onAction(String name, boolean keyPressed, float tpf) {
-        if ("duck".equals(name) && vy == 0) {
+        if ("duck".equals(name) && !isJumping) {
             isDucking = keyPressed;
-        } else if ("jump".equals(name) && keyPressed) {
-            if (vy == 0 && !isDucking) {
-                vy = 1;
-            }
+        } else if ("jump".equals(name) && !isDucking) {
+            isJumping = keyPressed;
+        } else if ("reset".equals(name)) {
+            reset();
         }
     }
 }

@@ -14,7 +14,7 @@ import java.util.Random;
 public class BezierCurve extends Node {
 
     //how much to step when generating bezier curves
-    private static final float ADD_WEIGHT = 0.02f;
+    private static final float ADD_WEIGHT = 0.01f;
     //the radius of the spline to generate
     public static final float RADIUS = 1;
     //instance of spline points
@@ -51,7 +51,7 @@ public class BezierCurve extends Node {
         while (weight < 1 - ADD_WEIGHT * overdo) {
             Vector3f a = getCubic(start, controlA, controlB, end, weight - ADD_WEIGHT * overdo),
                     b = getCubic(start, controlA, controlB, end, weight + ADD_WEIGHT * overdo);
-            Geometry g = new Geometry("slide", new Cylinder(36, 36, RADIUS, 1, false));
+            Geometry g = new Geometry("slide", new Cylinder(12, 12, RADIUS, 1, false));
             g.setMaterial(mat);
             setConnectiveTransform(new float[]{a.x, a.y, a.z}, new float[]{b.x, b.y, b.z}, g);
             node.attachChild(g);
