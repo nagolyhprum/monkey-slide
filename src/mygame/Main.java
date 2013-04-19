@@ -156,7 +156,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         geo.setMaterial(red);
         return geo;
     }
-    
+
     /**
      * Generates a spline that smoothly connects to the previous spline
      *
@@ -234,7 +234,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             coins.add(node);
             //place the coin
             putItHere(node, bc, i, start + progress * i);
-            Geometry wb = getInstance().makeWireBB(coin);
+            Geometry wb = makeWireBB(coin);
             wb.setLocalTranslation(coin.getLocalTranslation());
             node.attachChild(wb);
         }
@@ -283,28 +283,22 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             coins.remove(0);
             obstacles.remove(0);
         }
-        //start colliding
-        try {
-            Spatial car = characterModel.getChild("car");
-            for (int i = 0; i < coins.get(1).size(); i++) {
-                Spatial coin = coins.get(1).get(i).getChild("coin");
-                if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                    System.out.println("points!");
-                    coin.getParent().removeFromParent();
-                    coins.get(1).remove(i);
-                    i--;
-                }
+        Spatial car = characterModel.getChild("car");
+        for (int i = 0; i < coins.get(1).size(); i++) {
+            Spatial coin = coins.get(1).get(i).getChild("coin");
+            if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                System.out.println("points!");
+                coin.getParent().removeFromParent();
+                coins.get(1).remove(i);
+                i--;
             }
-            for (int i = 0; i < obstacles.get(1).size(); i++) {
-                Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
-                if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                    System.out.println("dead!");
-                    reset();
-                }
+        }
+        for (int i = 0; i < obstacles.get(1).size(); i++) {
+            Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
+            if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                System.out.println("dead!");
+                reset();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
         }
     }
 
