@@ -51,7 +51,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             //the amount to decrease from standing
             DUCKING_Y = 0.75f,
             //the amount to increase from standing
-            JUMPING_Y = 0.75f;
+            JUMPING_Y = 1f;
     //the scale when the character is standing
     private static final float SCALE = 0.25f;
     //is the character ducking?
@@ -85,7 +85,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastEnd = Vector3f.ZERO;
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
-        generateSlide(random, 4);
+        generateSlide(random, 6);
     }
 
     @Override
