@@ -12,22 +12,24 @@ public class Obstacle extends Node {
     public static class Jump extends Obstacle {
 
         public Jump(Material mat) {
-            Geometry geo = new Geometry("obstacle", new Cylinder(32, 32, BezierCurve.RADIUS + 1, 1, true));
+            Geometry geo = new Geometry("obstacle", new Cylinder(32, 32, BezierCurve.RADIUS + 0.75f, 1, true));
             geo.setMaterial(mat);
             attachChild(geo);
-
-            Main.getInstance().attachBB(this);
         }
     }
 
     public static class Duck extends Obstacle {
 
         public Duck(Material mat) {
-            Geometry geo = new Geometry("obstacle", new Torus(32, 32, 1f, BezierCurve.RADIUS + 1.5f));
+            Geometry geo = new Geometry("obstacle", new Torus(32, 32, 0.5f, BezierCurve.RADIUS + 2f));
             geo.setMaterial(mat);
             attachChild(geo);
-
-            Main.getInstance().attachBB(this);
+            geo = new Geometry("obstacle", new Torus(32, 32, 0.5f, BezierCurve.RADIUS + 3f));
+            geo.setMaterial(mat);
+            attachChild(geo);
+            geo = new Geometry("obstacle", new Torus(32, 32, 0.5f, BezierCurve.RADIUS + 4f));
+            geo.setMaterial(mat);
+            attachChild(geo);
         }
     }
 
@@ -40,8 +42,6 @@ public class Obstacle extends Node {
             geo.setLocalTranslation(0, height / 2, 0);
             geo.rotate(FastMath.HALF_PI, 0, 0);
             attachChild(geo);
-
-            Main.getInstance().attachBB(this);
         }
     }
 }

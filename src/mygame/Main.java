@@ -113,7 +113,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         car.setName("car");
         car.detachChildAt(0);
 
-        attachBB(car);
+        Geometry wb = makeWireBB(car);
+        car.attachChild(wb);
 
         characterModel.attachChild(car);
         characterModel.scale(SCALE);
@@ -122,7 +123,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rootNode.attachChild(path);
         //set up the camera
         flyCam.setDragToRotate(true);
-        flyCam.setMoveSpeed(20);
+        flyCam.setMoveSpeed(50);
         flyCam.setEnabled(false);
         //create the camera Node
         CameraNode camNode = new CameraNode("Camera Node", cam);
@@ -146,16 +147,16 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         reset();
     }
 
-    public void attachBB(Node node) {
+    public static Geometry makeWireBB(Spatial object) {
         WireBox wb = new WireBox();
-        wb.fromBoundingBox((BoundingBox) node.getWorldBound());
+        wb.fromBoundingBox((BoundingBox) object.getWorldBound());
         Geometry geo = new Geometry("bb", wb);
-        Material red = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        Material red = new Material(SINGLETON.assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
         red.setColor("Color", ColorRGBA.Red);
         geo.setMaterial(red);
-        node.attachChild(geo);
+        return geo;
     }
-
+    
     /**
      * Generates a spline that smoothly connects to the previous spline
      *
@@ -171,8 +172,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             color.setColor("Ambient", ColorRGBA.randomColor());
             color.setBoolean("UseMaterialColors", true);
             //figure out how to set up the bezier curve
-            Vector3f end = BezierCurve.generateLandmark(lastEnd, random),
-                    direction = BezierCurve.generateDirection(random, lastDirection);
+            Vector3f end = BezierCurve.generateLandmark(lastEnd, random);
+            Vector3f direction = BezierCurve.generateDirection(random, lastDirection);
             //create the bezier curve
             BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
             //add the bezier curve to the scene and list
@@ -187,11 +188,15 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez = Obstacle.class.getDeclaredClasses();
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
+                Geometry wb;
                 try {
                     //create and place the obstacle
                     Node node = (Node) clazz.getConstructor(Material.class).newInstance(color);
                     putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                     bc.attachChild(node);
+                    wb = makeWireBB(node.getChild("obstacle"));
+                    wb.setLocalTransform(node.getChild("obstacle").getLocalTransform());
+                    node.attachChild(wb);
                     os.add(node);
                 } catch (Exception e) {
                     System.exit(1);
@@ -220,8 +225,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         //add coins to certain locations
         for (float i = 0.25f; i <= 0.75; i += 0.05) {
             //create the coin
-            Geometry coin = new Geometry("coin", new Sphere(32, 32, 1f));
-            coin.scale(0.8f, 0.8f, 0.05f);
+            Geometry coin = new Geometry("coin", new Cylinder(32, 32, 0.5f, 0.05f, true));
             coin.setLocalTranslation(0, BezierCurve.RADIUS + 1f, 0);
             coin.setMaterial(mat);
             Node node = new Node();
@@ -230,7 +234,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             coins.add(node);
             //place the coin
             putItHere(node, bc, i, start + progress * i);
-            getInstance().attachBB(node);
+            Geometry wb = getInstance().makeWireBB(coin);
+            wb.setLocalTranslation(coin.getLocalTranslation());
+            node.attachChild(wb);
         }
     }
 
@@ -282,7 +288,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             Spatial car = characterModel.getChild("car");
             for (int i = 0; i < coins.get(1).size(); i++) {
                 Spatial coin = coins.get(1).get(i).getChild("coin");
-                if (car.collideWith(coin.getWorldBound(), new CollisionResults()) != 0) {
+                if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                     System.out.println("points!");
                     coin.getParent().removeFromParent();
                     coins.get(1).remove(i);
@@ -291,7 +297,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             }
             for (int i = 0; i < obstacles.get(1).size(); i++) {
                 Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
-                if (car.collideWith(obstacle.getWorldBound(), new CollisionResults()) != 0) {
+                if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                     System.out.println("dead!");
                     reset();
                 }
