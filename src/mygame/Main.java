@@ -8,6 +8,7 @@ import com.jme3.input.controls.*;
 import com.jme3.light.*;
 import com.jme3.material.Material;
 import com.jme3.math.*;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.*;
 import com.jme3.scene.control.CameraControl.ControlDirection;
 import com.jme3.scene.debug.WireBox;
@@ -55,7 +56,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the scale when the character is standing
     private static final float SCALE = 0.25f;
     //is the character ducking?
-    private boolean isDucking, isJumping;
+    private boolean isDucking, isJumping, isRunning;
     private static final Main SINGLETON = new Main();
 
     public static void main(String[] args) {
@@ -78,6 +79,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
+
+        hover = 0;
+        y = 0;
+        experienced = 0;
         slides.clear();
         coins.clear();
         obstacles.clear();
@@ -86,6 +91,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
         generateSlide(random, 6);
+        isJumping = isDucking = false;
+        isRunning = true;
+        simpleUpdate(0);
+        isRunning = false;
     }
 
     @Override
@@ -137,13 +146,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
         //create key events
         InputManager im = getInputManager();
+        im.addMapping("start", new KeyTrigger(KeyInput.KEY_Q));
         im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_A));
         im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_D));
         im.addMapping("duck", new KeyTrigger(KeyInput.KEY_S));
         im.addMapping("jump", new KeyTrigger(KeyInput.KEY_W));
-        im.addMapping("reset", new KeyTrigger(KeyInput.KEY_BACKSLASH));
+        im.addMapping("reset", new KeyTrigger(KeyInput.KEY_R));
         im.addListener(this, "clockwise", "counterclockwise");
-        im.addListener(this, "duck", "jump", "reset");
+        im.addListener(this, "duck", "jump", "reset", "start");
         reset();
     }
 
@@ -166,8 +176,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         for (int i = 0; i < count; i++) {
             //set up the material for this whole section
             Material color = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-            //Texture texture = assetManager.loadTexture("Textures/road.jpg");
-            //color.setTexture("ColorMap", texture);
             color.setColor("Diffuse", ColorRGBA.White);
             color.setColor("Ambient", ColorRGBA.randomColor());
             color.setBoolean("UseMaterialColors", true);
@@ -178,7 +186,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
             //add the bezier curve to the scene and list
             slides.add(bc);
-            rootNode.attachChild(bc);
             //this is the new ending location and direction
             lastEnd = end;
             lastDirection = direction;
@@ -207,6 +214,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             this.obstacles.add(os);
             this.coins.add(cs);
             experienced++;
+
+            bc.setQueueBucket(RenderQueue.Bucket.Transparent);
+            rootNode.attachChild(bc);
         }
     }
 
@@ -242,62 +252,68 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     @Override
     public void simpleUpdate(float tpf) {
-        //set up the orientation of the player        
-        hover += FastMath.PI * tpf;
-        if (isDucking) {
-            if (y > -DUCKING_Y) {
-                y -= tpf;
+        if (isRunning) {
+            //set up the orientation of the player        
+            hover += FastMath.PI * tpf;
+            if (isDucking) {
+                if (y > -DUCKING_Y) {
+                    y -= tpf;
+                }
+                if (y < -DUCKING_Y) {
+                    y = -DUCKING_Y;
+                    isDucking = false;
+                }
+                characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
+            } else if (isJumping) {
+                if (y < JUMPING_Y) {
+                    y += tpf;
+                }
+                if (y > JUMPING_Y) {
+                    y = JUMPING_Y;
+                    isJumping = false;
+                }
+                characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
+            } else {
+                float ty = this.y;
+                if (ty != 0) {
+                    ty -= tpf * FastMath.abs(ty) / ty;
+                }
+                if ((FastMath.abs(ty) / ty) != (FastMath.abs(y) / y)) {
+                    ty = 0;
+                }
+                y = ty;
+                characterModel.setLocalTranslation(0, STANDING_Y + y + FastMath.sin(hover) * 0.125f, 0);
             }
-            if (y < -DUCKING_Y) {
-                y = -DUCKING_Y;
+            if (!slides.isEmpty()) {
+                putItHere(path, slides.get(1), location, rotation);
             }
-            characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
-        } else if (isJumping) {
-            if (y < JUMPING_Y) {
-                y += tpf;
+            location += tpf * 0.25;
+            while (location >= 1) {
+                generateSlide(random, 1);
+                location -= 1;
+                rootNode.detachChild(slides.get(0));
+                slides.remove(0);
+                coins.remove(0);
+                obstacles.remove(0);
+
+                slides.get(0).alpha();
             }
-            if (y > JUMPING_Y) {
-                y = JUMPING_Y;
+            Spatial car = characterModel.getChild("car");
+            for (int i = 0; i < coins.get(1).size(); i++) {
+                Spatial coin = coins.get(1).get(i).getChild("coin");
+                if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                    System.out.println("points!");
+                    coin.getParent().removeFromParent();
+                    coins.get(1).remove(i);
+                    i--;
+                }
             }
-            characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
-        } else {
-            float ty = this.y;
-            if (ty != 0) {
-                ty -= tpf * FastMath.abs(ty) / ty;
-            }
-            if ((FastMath.abs(ty) / ty) != (FastMath.abs(y) / y)) {
-                ty = 0;
-            }
-            y = ty;
-            characterModel.setLocalTranslation(0, STANDING_Y + y + FastMath.sin(hover) * 0.125f, 0);
-        }
-        if (!slides.isEmpty()) {
-            putItHere(path, slides.get(1), location, rotation);
-        }
-        location += tpf * 0.25;
-        while (location >= 1) {
-            generateSlide(random, 1);
-            location -= 1;
-            rootNode.detachChild(slides.get(0));
-            slides.remove(0);
-            coins.remove(0);
-            obstacles.remove(0);
-        }
-        Spatial car = characterModel.getChild("car");
-        for (int i = 0; i < coins.get(1).size(); i++) {
-            Spatial coin = coins.get(1).get(i).getChild("coin");
-            if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                System.out.println("points!");
-                coin.getParent().removeFromParent();
-                coins.get(1).remove(i);
-                i--;
-            }
-        }
-        for (int i = 0; i < obstacles.get(1).size(); i++) {
-            Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
-            if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                System.out.println("dead!");
-                reset();
+            for (int i = 0; i < obstacles.get(1).size(); i++) {
+                Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
+                if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                    System.out.println("dead!");
+                    reset();
+                }
             }
         }
     }
@@ -335,12 +351,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void onAction(String name, boolean keyPressed, float tpf) {
-        if ("duck".equals(name) && !isJumping) {
+        if ("duck".equals(name) && y == 0) {
             isDucking = keyPressed;
-        } else if ("jump".equals(name) && !isDucking) {
+        } else if ("jump".equals(name) && y == 0) {
             isJumping = keyPressed;
         } else if ("reset".equals(name)) {
             reset();
+        } else if ("start".equals(name)) {
+            isRunning = true;
         }
     }
 }

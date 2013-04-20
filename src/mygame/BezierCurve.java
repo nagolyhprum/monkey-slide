@@ -1,10 +1,14 @@
 package mygame;
 
+import com.jme3.material.MatParam;
 import com.jme3.material.Material;
+import com.jme3.material.RenderState.BlendMode;
+import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Cylinder;
@@ -19,12 +23,14 @@ public class BezierCurve extends Node {
     public static final float RADIUS = 1;
     //instance of spline points
     private Vector3f start, controlA, controlB, end;
+    private Material mat;
 
-    public BezierCurve(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
+    public BezierCurve(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {        
         this.start = start;
         this.controlA = controlA;
         this.controlB = controlB;
         this.end = end;
+        this.mat = mat;
         addSpline(mat, this, start, controlA, controlB, end);
     }
 
@@ -122,5 +128,13 @@ public class BezierCurve extends Node {
         rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.TWO_PI * (random.nextFloat() - 0.5f) / 360, Vector3f.UNIT_Y));
         rot = rot.mult(new Quaternion().fromAngleAxis(FastMath.TWO_PI * (random.nextFloat() - 0.5f) / 360, Vector3f.UNIT_X));
         return rot.mult(lastDirection);
+    }
+
+    public void alpha() {
+        MatParam param = this.mat.getParam("Ambient");
+        ColorRGBA color = (ColorRGBA) param.getValue();
+        color = color.set(color.r, color.g, color.b, 0.1f);
+        mat.setColor("Ambient", color);
+        mat.getAdditionalRenderState().setBlendMode(BlendMode.Alpha);
     }
 }
