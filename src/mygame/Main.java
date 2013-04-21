@@ -65,7 +65,11 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the fall acceleration of the character
     public static final float GRAVITY = 9.8f;
     //initial velocity of a jump
-    public static final float JUMP_POWER = 15f;
+    public static final float JUMP_POWER = 6f;
+    //rise speed for returning from duck position
+    public static final float HOVER_RISE = 1.7f;
+    //initial velocity of a duck
+    public static final float DUCK_POWER = 3f;
     //is the character ducking?
     private boolean isDucking;
     private boolean isJumping;
@@ -333,20 +337,16 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             //set up the orientation of the player        
             hover += FastMath.PI * tpf;
             if (isDucking) {
-                if (y > -DUCKING_Y) {
-                    y -= tpf;
-                }
-                if (y < -DUCKING_Y) {
-                    y = -DUCKING_Y;
+                y -= yVelocity * tpf;
+                yVelocity -= GRAVITY * tpf;
+                if (y >= 0) {
                     isDucking = false;
                 }
                 characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
             } else if (isJumping) {
-                if (y < JUMPING_Y) {
-                    y += tpf;
-                }
-                if (y > JUMPING_Y) {
-                    y = JUMPING_Y;
+                y += yVelocity * tpf;
+                yVelocity -= GRAVITY * tpf;
+                if (y <= 0) {
                     isJumping = false;
                 }
                 characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
@@ -428,9 +428,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void onAction(String name, boolean keyPressed, float tpf) {
-        if ("duck".equals(name) && y == 0) {
+        if ("duck".equals(name) && !isDucking) {
             isDucking = keyPressed;
-        } else if ("jump".equals(name) && y == 0) {
+            yVelocity = DUCK_POWER;
+        } else if ("jump".equals(name) && !isJumping) {
             isJumping = keyPressed;
             yVelocity = JUMP_POWER;
         } else if ("reset".equals(name)) {
