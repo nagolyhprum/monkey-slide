@@ -57,7 +57,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private static final float SCALE = 0.25f;
     //is the character ducking?
     private boolean isDucking, isJumping, isRunning;
+    private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
+    private CameraNode camNode;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -133,27 +135,30 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         //set up the camera
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(50);
-        flyCam.setEnabled(false);
+        flyCam.setEnabled(!debugMode);
         //create the camera Node
-        CameraNode camNode = new CameraNode("Camera Node", cam);
+        camNode = new CameraNode("Camera Node", cam);
         //This mode means that camera copies the movements of the target:
         camNode.setControlDir(ControlDirection.SpatialToCamera);
         //Attach the camNode to the target:
-        characterNode.attachChild(camNode);
+        if (!debugMode) {
+            characterNode.attachChild(camNode);
+        }
         //Move camNode, e.g. behind and above the target:
         camNode.setLocalTranslation(new Vector3f(0, 5, -10));
         //Rotate the camNode to look at the target:
         camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
         //create key events
         InputManager im = getInputManager();
-        im.addMapping("start", new KeyTrigger(KeyInput.KEY_Q));
-        im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_A));
-        im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_D));
-        im.addMapping("duck", new KeyTrigger(KeyInput.KEY_S));
-        im.addMapping("jump", new KeyTrigger(KeyInput.KEY_W));
-        im.addMapping("reset", new KeyTrigger(KeyInput.KEY_R));
+        im.addMapping("start", new KeyTrigger(KeyInput.KEY_U));
+        im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_J));
+        im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_L));
+        im.addMapping("duck", new KeyTrigger(KeyInput.KEY_K));
+        im.addMapping("jump", new KeyTrigger(KeyInput.KEY_I));
+        im.addMapping("reset", new KeyTrigger(KeyInput.KEY_O));
+        im.addMapping("debug", new KeyTrigger(KeyInput.KEY_BACKSLASH));
         im.addListener(this, "clockwise", "counterclockwise");
-        im.addListener(this, "duck", "jump", "reset", "start");
+        im.addListener(this, "duck", "jump", "reset", "start", "debug");
         reset();
     }
 
@@ -252,6 +257,16 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     @Override
     public void simpleUpdate(float tpf) {
+        if (debugMode) {
+            if (characterNode.hasChild(camNode)) {
+                characterNode.detachChild(camNode);
+            }
+        } else {
+            if (!(characterNode.hasChild(camNode))) {
+                characterNode.attachChild(camNode);
+            }
+        }
+        flyCam.setEnabled(debugMode);
         if (isRunning) {
             //set up the orientation of the player        
             hover += FastMath.PI * tpf;
@@ -359,6 +374,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             reset();
         } else if ("start".equals(name)) {
             isRunning = true;
+        } else if ("debug".equals(name)) {
+            debugMode = !debugMode;
         }
     }
 }
