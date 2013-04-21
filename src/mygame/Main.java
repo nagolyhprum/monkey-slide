@@ -19,6 +19,8 @@ import com.jme3.scene.debug.WireBox;
 import com.jme3.scene.shape.*;
 import com.jme3.shadow.PssmShadowRenderer;
 import com.jme3.system.AppSettings;
+import com.jme3.texture.Texture;
+import com.jme3.util.SkyFactory;
 import java.util.*;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
@@ -28,7 +30,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the number of splines in existance
     public int experienced;
     //how fast the character rotates
-    public static final float TURN_SPEED = FastMath.TWO_PI / 4;
+    public static final float TURN_SPEED = FastMath.TWO_PI / 3.2f;
     //these are all of the slides in memory
     private ArrayList<BezierCurve> slides;
     //these are the coins in memory
@@ -54,22 +56,18 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private float yVelocity;
     //the y coordinate when the character is standing
     public static final float STANDING_Y = 2;
-    //the amount to decrease from standing
-    public static final float DUCKING_Y = 0.75f;
-    //the amount to increase from standing
-    public static final float JUMPING_Y = 1f;
     //the scale when the character is standing
-    public static final float SCALE = 0.20f;
+    public static final float SCALE = 0.33f;
     //the forward movement speed of the character
-    public static final float FORWARD_SPEED = 0.30f;
+    public static final float FORWARD_SPEED = 0.35f;
     //the fall acceleration of the character
     public static final float GRAVITY = 9.8f;
     //initial velocity of a jump
-    public static final float JUMP_POWER = 6f;
+    public static final float JUMP_POWER = 5.5f;
     //rise speed for returning from duck position
-    public static final float HOVER_RISE = 1.7f;
+    public static final float HOVER_RISE = 1.5f;
     //initial velocity of a duck
-    public static final float DUCK_POWER = 3f;
+    public static final float DUCK_POWER = 4f;
     //is the character ducking?
     private boolean isDucking;
     private boolean isJumping;
@@ -134,6 +132,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         initMaterials();
         initCharacter();
         initLightAndShadow();
+        initSkybox();
         initCamera();
         //create key events
         InputManager im = getInputManager();
@@ -184,14 +183,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         characterModel = new Node();
         characterNode = new Node();
 
-        Node car = (Node) assetManager.loadModel("Models/car/_car_04.j3o");
-        car.setName("car");
-        car.detachChildAt(0);
+        Node bed = (Node) assetManager.loadModel("Models/hospital_bed_small/letto_small.j3o");
+        bed.setName("bed");
 
-        Geometry wb = makeWireBB(car);
-        car.attachChild(wb);
+        Geometry wb = makeWireBB(bed);
+        bed.attachChild(wb);
 
-        characterModel.attachChild(car);
+        characterModel.attachChild(bed);
         characterModel.scale(SCALE);
         characterNode.attachChild(characterModel);
         path.attachChild(characterNode);
@@ -234,6 +232,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         coinMat.setColor("Specular", ColorRGBA.White);
         coinMat.setFloat("Shininess", 96f);
         coinMat.setBoolean("UseMaterialColors", true);
+    }
+    
+    private void initSkybox() {
+        Spatial skybox = SkyFactory.createSky(assetManager, "Textures/skybox/StarrySky.dds", false);
+        skybox.setCullHint(Spatial.CullHint.Never);
+        skybox.setLocalScale(50f);
+        characterNode.attachChild(skybox);
     }
 
     /**
@@ -375,7 +380,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
                 slides.get(0).alpha();
             }
-            Spatial car = characterModel.getChild("car");
+            Spatial car = characterModel.getChild("bed");
             for (int i = 0; i < coins.get(1).size(); i++) {
                 Spatial coin = coins.get(1).get(i).getChild("coin");
                 if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
