@@ -10,11 +10,14 @@ import com.jme3.material.Material;
 import com.jme3.math.*;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
+import com.jme3.post.ssao.SSAOFilter;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.*;
 import com.jme3.scene.control.CameraControl.ControlDirection;
+import com.jme3.scene.control.LightControl;
 import com.jme3.scene.debug.WireBox;
 import com.jme3.scene.shape.*;
+import com.jme3.shadow.PssmShadowRenderer;
 import com.jme3.system.AppSettings;
 import java.util.*;
 
@@ -47,15 +50,22 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private Random random;
     //the current y offset of the character
     private float y;
+    //the current y velocity of the character
+    private float yVelocity;
     //the y coordinate when the character is standing
-    private static final float STANDING_Y = 2;
+    public static final float STANDING_Y = 2;
     //the amount to decrease from standing
-    private static final float DUCKING_Y = 0.75f;
+    public static final float DUCKING_Y = 0.75f;
     //the amount to increase from standing
-    private static final float JUMPING_Y = 1f;
+    public static final float JUMPING_Y = 1f;
     //the scale when the character is standing
-    private static final float SCALE = 0.20f;
-    private static final float FORWARD_SPEED = 0.30f;
+    public static final float SCALE = 0.20f;
+    //the forward movement speed of the character
+    public static final float FORWARD_SPEED = 0.30f;
+    //the fall acceleration of the character
+    public static final float GRAVITY = 9.8f;
+    //initial velocity of a jump
+    public static final float JUMP_POWER = 15f;
     //is the character ducking?
     private boolean isDucking;
     private boolean isJumping;
@@ -64,7 +74,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private static final Main SINGLETON = new Main();
     private CameraNode camNode;
     private Material coinMat;
-    private PointLight lamp;
+    private PssmShadowRenderer pssmRenderer;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -119,7 +129,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         //more initializations
         initMaterials();
         initCharacter();
-        initLights();
+        initLightAndShadow();
         initCamera();
         //create key events
         InputManager im = getInputManager();
@@ -184,7 +194,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rootNode.attachChild(path);
     }
 
-    private void initLights() {
+    private void initLightAndShadow() {
         //add ambient light
         AmbientLight ambient = new AmbientLight();
         ambient.setColor(ColorRGBA.White);
@@ -194,11 +204,23 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
          */
         Vector3f charPos = characterModel.getWorldTranslation();
         charPos.addLocal(5f, 5f, 0);
-        lamp = new PointLight();
+        PointLight lamp = new PointLight();
         lamp.setColor(ColorRGBA.White);
         lamp.setPosition(charPos);
-        lamp.setRadius(35f);
+        lamp.setRadius(50f);
         rootNode.addLight(lamp);
+        // make the light follow the player
+        Vector3f lightPos = new Vector3f(7f, 7f, 2f);
+        LightControl lightCon = new LightControl(lamp);
+        Node lampNode = new Node("lamp node");
+        lampNode.setLocalTranslation(lightPos);
+        characterNode.attachChild(lampNode);
+        lampNode.addControl(lightCon);
+        //SSAO
+        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
+        SSAOFilter ssaoFilter = new SSAOFilter(12.94f, 43.92f, 0.33f, 0.61f);
+        fpp.addFilter(ssaoFilter);
+        viewPort.addProcessor(fpp);
     }
 
     private void initMaterials() {
@@ -370,9 +392,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     reset();
                 }
             }
-            //make the lamp stay with the player
-            Vector3f charPos = path.getWorldTranslation().add(5f, 5f, 0);
-            lamp.setPosition(charPos);
         }
     }
 
@@ -413,6 +432,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             isDucking = keyPressed;
         } else if ("jump".equals(name) && y == 0) {
             isJumping = keyPressed;
+            yVelocity = JUMP_POWER;
         } else if ("reset".equals(name)) {
             reset();
         } else if ("start".equals(name)) {
