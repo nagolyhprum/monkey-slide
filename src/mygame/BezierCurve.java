@@ -8,10 +8,8 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
-import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
-import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.scene.shape.Sphere;
 import java.util.Random;
@@ -32,7 +30,7 @@ public class BezierCurve extends Node {
         this.controlB = controlB;
         this.end = end;
         this.mat = mat;
-        addSpline(mat, this, start, controlA, controlB, end);
+        addSpline(mat, start, controlA, controlB, end);
     }
 
     public Vector3f getDirection(float weight) {
@@ -52,7 +50,7 @@ public class BezierCurve extends Node {
      * @param controlB smoothness factor
      * @param end position of the spline
      */
-    public static void addSpline(Material mat, Node node, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
+    private void addSpline(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
         int overdo = 5;
         float weight = ADD_WEIGHT * overdo;
         while (weight < 1 - ADD_WEIGHT * overdo) {
@@ -61,17 +59,17 @@ public class BezierCurve extends Node {
             Geometry g = new Geometry("slide", new Cylinder(12, 12, RADIUS, 1, false));
             g.setMaterial(mat);
             setConnectiveTransform(new float[]{a.x, a.y, a.z}, new float[]{b.x, b.y, b.z}, g);
-            node.attachChild(g);
+            this.attachChild(g);
             weight = weight + ADD_WEIGHT;
         }
         Geometry s = new Geometry("start", new Sphere(32, 32, RADIUS));
         s.setLocalTranslation(start);
         s.setMaterial(mat);
-        node.attachChild(s);
+        this.attachChild(s);
         s = new Geometry("end", new Sphere(32, 32, RADIUS));
         s.setLocalTranslation(end);
         s.setMaterial(mat);
-        node.attachChild(s);
+        this.attachChild(s);
     }
 
     public static Vector3f getDirection(Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end, float weight) {
@@ -132,11 +130,11 @@ public class BezierCurve extends Node {
     }
 
     public void alpha() {
-        MatParam param = this.mat.getParam("Ambient");
+        MatParam param = this.mat.getParam("Diffuse");
         ColorRGBA color = (ColorRGBA) param.getValue();
         color = color.set(color.r, color.g, color.b, 0.1f);
-        mat.setColor("Ambient", color);
-        mat.setColor("Diffuse", new ColorRGBA(1.0f, 1.0f, 1.0f, 0.1f));
+        mat.setColor("Diffuse", color);
+        mat.setColor("Ambient", new ColorRGBA(1.0f, 1.0f, 1.0f, 0.1f));
         mat.setBoolean("UseAlpha", true);
         mat.getAdditionalRenderState().setBlendMode(BlendMode.Alpha);
     }

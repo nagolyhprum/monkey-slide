@@ -8,6 +8,8 @@ import com.jme3.input.controls.*;
 import com.jme3.light.*;
 import com.jme3.material.Material;
 import com.jme3.math.*;
+import com.jme3.post.FilterPostProcessor;
+import com.jme3.post.filters.BloomFilter;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.*;
 import com.jme3.scene.control.CameraControl.ControlDirection;
@@ -34,11 +36,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private float location = 0,
             //what is the characters rotation on the slide
             rotation = 0;
-    //the parent node of the character
-    private Node path,
-            //this node only contains the camera and the character
-            characterNode,
-            characterModel;
+    private Node path;
+    private Node characterNode; //the parent node of the character
+    private Node characterModel; //this node only contains the camera and the character
     //the is where the last spline ends
     private Vector3f lastEnd,
             //this is the direction the last spline ends in
@@ -48,23 +48,28 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the current y offset of the character
     private float y;
     //the y coordinate when the character is standing
-    private static final float STANDING_Y = 2,
-            //the amount to decrease from standing
-            DUCKING_Y = 0.75f,
-            //the amount to increase from standing
-            JUMPING_Y = 1f;
+    private static final float STANDING_Y = 2;
+    //the amount to decrease from standing
+    private static final float DUCKING_Y = 0.75f;
+    //the amount to increase from standing
+    private static final float JUMPING_Y = 1f;
     //the scale when the character is standing
-    private static final float SCALE = 0.25f;
+    private static final float SCALE = 0.20f;
+    private static final float FORWARD_SPEED = 0.30f;
     //is the character ducking?
-    private boolean isDucking, isJumping, isRunning;
+    private boolean isDucking;
+    private boolean isJumping;
+    private boolean isRunning;
     private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
     private CameraNode camNode;
+    private Material coinMat;
+    private PointLight lamp;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(2);
-        as.setResolution(800, 600);
+        as.setResolution(1024, 768);
         SINGLETON.setSettings(as);
         SINGLETON.setShowSettings(false);
         SINGLETON.start();
@@ -106,48 +111,16 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         slides = new ArrayList<BezierCurve>();
         coins = new ArrayList<ArrayList<Node>>();
         obstacles = new ArrayList<ArrayList<Node>>();
-        //add ambient light
-        AmbientLight ambient = new AmbientLight();
-        ambient.setColor(ColorRGBA.White);
-        rootNode.addLight(ambient);
-        //add sunlight
-        DirectionalLight sun = new DirectionalLight();
-        sun.setDirection((new Vector3f(-0.5f, -0.5f, -0.5f)).normalizeLocal());
-        sun.setColor(ColorRGBA.White);
-        rootNode.addLight(sun);
-        //create the character
-        path = new Node();
-        characterModel = new Node();
-        characterNode = new Node();
-
-        Node car = (Node) assetManager.loadModel("Models/car/_car_04.j3o");
-        car.setName("car");
-        car.detachChildAt(0);
-
-        Geometry wb = makeWireBB(car);
-        car.attachChild(wb);
-
-        characterModel.attachChild(car);
-        characterModel.scale(SCALE);
-        characterNode.attachChild(characterModel);
-        path.attachChild(characterNode);
-        rootNode.attachChild(path);
-        //set up the camera
-        flyCam.setDragToRotate(true);
-        flyCam.setMoveSpeed(50);
-        flyCam.setEnabled(!debugMode);
-        //create the camera Node
-        camNode = new CameraNode("Camera Node", cam);
-        //This mode means that camera copies the movements of the target:
-        camNode.setControlDir(ControlDirection.SpatialToCamera);
-        //Attach the camNode to the target:
-        if (!debugMode) {
-            characterNode.attachChild(camNode);
-        }
-        //Move camNode, e.g. behind and above the target:
-        camNode.setLocalTranslation(new Vector3f(0, 5, -10));
-        //Rotate the camNode to look at the target:
-        camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
+        //bloom postprocess filter for glow effects
+        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
+        BloomFilter bloom = new BloomFilter(BloomFilter.GlowMode.Objects);
+        fpp.addFilter(bloom);
+        viewPort.addProcessor(fpp);
+        //more initializations
+        initMaterials();
+        initCharacter();
+        initLights();
+        initCamera();
         //create key events
         InputManager im = getInputManager();
         im.addMapping("start", new KeyTrigger(KeyInput.KEY_U));
@@ -172,6 +145,71 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         return geo;
     }
 
+    private void initCamera() {
+        //set up the camera
+        flyCam.setDragToRotate(true);
+        flyCam.setMoveSpeed(50);
+        flyCam.setEnabled(!debugMode);
+        //create the camera Node
+        camNode = new CameraNode("Camera Node", cam);
+        //This mode means that camera copies the movements of the target:
+        camNode.setControlDir(ControlDirection.SpatialToCamera);
+        //Attach the camNode to the target:
+        if (!debugMode) {
+            characterNode.attachChild(camNode);
+        }
+        //Move camNode, e.g. behind and above the target:
+        camNode.setLocalTranslation(new Vector3f(0, 5, -10));
+        //Rotate the camNode to look at the target:
+        camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
+    }
+
+    private void initCharacter() {
+        //create the character
+        path = new Node();
+        characterModel = new Node();
+        characterNode = new Node();
+
+        Node car = (Node) assetManager.loadModel("Models/car/_car_04.j3o");
+        car.setName("car");
+        car.detachChildAt(0);
+
+        Geometry wb = makeWireBB(car);
+        car.attachChild(wb);
+
+        characterModel.attachChild(car);
+        characterModel.scale(SCALE);
+        characterNode.attachChild(characterModel);
+        path.attachChild(characterNode);
+        rootNode.attachChild(path);
+    }
+
+    private void initLights() {
+        //add ambient light
+        AmbientLight ambient = new AmbientLight();
+        ambient.setColor(ColorRGBA.White);
+        rootNode.addLight(ambient);
+        /**
+         * A white, spot light source.
+         */
+        Vector3f charPos = characterModel.getWorldTranslation();
+        charPos.addLocal(5f, 5f, 0);
+        lamp = new PointLight();
+        lamp.setColor(ColorRGBA.White);
+        lamp.setPosition(charPos);
+        lamp.setRadius(35f);
+        rootNode.addLight(lamp);
+    }
+
+    private void initMaterials() {
+        coinMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        coinMat.setColor("Ambient", ColorRGBA.Brown);
+        coinMat.setColor("Diffuse", ColorRGBA.Yellow);
+        coinMat.setColor("Specular", ColorRGBA.White);
+        coinMat.setFloat("Shininess", 96f);
+        coinMat.setBoolean("UseMaterialColors", true);
+    }
+
     /**
      * Generates a spline that smoothly connects to the previous spline
      *
@@ -180,15 +218,17 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public void generateSlide(Random random, int count) {
         for (int i = 0; i < count; i++) {
             //set up the material for this whole section
-            Material color = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-            color.setColor("Diffuse", ColorRGBA.White);
-            color.setColor("Ambient", ColorRGBA.randomColor());
-            color.setBoolean("UseMaterialColors", true);
+            ColorRGBA slideColor = ColorRGBA.randomColor();
+            ColorRGBA slideAmbient = slideColor.mult(0.05f);
+            Material slideMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+            slideMat.setColor("Ambient", slideAmbient);
+            slideMat.setColor("Diffuse", slideColor);
+            slideMat.setBoolean("UseMaterialColors", true);
             //figure out how to set up the bezier curve
             Vector3f end = BezierCurve.generateLandmark(lastEnd, random);
             Vector3f direction = BezierCurve.generateDirection(random, lastDirection);
             //create the bezier curve
-            BezierCurve bc = new BezierCurve(color, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
+            BezierCurve bc = new BezierCurve(slideMat, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
             //add the bezier curve to the scene and list
             slides.add(bc);
             //this is the new ending location and direction
@@ -203,7 +243,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 Geometry wb;
                 try {
                     //create and place the obstacle
-                    Node node = (Node) clazz.getConstructor(Material.class).newInstance(color);
+                    Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
                     putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                     bc.attachChild(node);
                     wb = makeWireBB(node.getChild("obstacle"));
@@ -214,7 +254,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     System.exit(1);
                 }
             } else if (slides.size() > 1) { //if this is not the first slide or a slide with obstacles           
-                addCoins(bc, color, cs); //then add coins to it
+                addCoins(bc, coinMat, cs); //then add coins to it
             }
             this.obstacles.add(os);
             this.coins.add(cs);
@@ -232,7 +272,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      * @param bc the bezier curve that the coins should follow
      * @param mat the material to be used for the coins
      */
-    public static void addCoins(BezierCurve bc, Material mat, ArrayList<Node> coins) {
+    public void addCoins(BezierCurve bc, Material mat, ArrayList<Node> coins) {
         //which rotation do we start
         float start = TURN_SPEED * FastMath.rand.nextFloat(),
                 //how fast does the rotation go?
@@ -302,7 +342,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             if (!slides.isEmpty()) {
                 putItHere(path, slides.get(1), location, rotation);
             }
-            location += tpf * 0.25;
+            location += tpf * FORWARD_SPEED;
             while (location >= 1) {
                 generateSlide(random, 1);
                 location -= 1;
@@ -330,6 +370,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     reset();
                 }
             }
+            //make the lamp stay with the player
+            Vector3f charPos = path.getWorldTranslation().add(5f, 5f, 0);
+            lamp.setPosition(charPos);
         }
     }
 
