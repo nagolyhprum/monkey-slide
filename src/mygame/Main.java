@@ -75,7 +75,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
     private CameraNode camNode;
-    private Material coinMat;
+    private Material coinMat, rainbow;
     private PssmShadowRenderer pssmRenderer;
 
     public static void main(String[] args) {
@@ -232,8 +232,15 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         coinMat.setColor("Specular", ColorRGBA.White);
         coinMat.setFloat("Shininess", 96f);
         coinMat.setBoolean("UseMaterialColors", true);
+
+        rainbow = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        Texture texture = assetManager.loadTexture("Textures/rainbow.jpg");
+        rainbow.setTexture("DiffuseMap", texture);
+        rainbow.setFloat("Shininess", 96);
+        rainbow.setColor("Specular", ColorRGBA.White);
+        rainbow.setColor("Diffuse", ColorRGBA.White);
     }
-    
+
     private void initSkybox() {
         Spatial skybox = SkyFactory.createSky(assetManager, "Textures/skybox/StarrySky.dds", false);
         skybox.setCullHint(Spatial.CullHint.Never);
@@ -259,7 +266,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             Vector3f end = BezierCurve.generateLandmark(lastEnd, random);
             Vector3f direction = BezierCurve.generateDirection(random, lastDirection);
             //create the bezier curve
-            BezierCurve bc = new BezierCurve(slideMat, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
+            BezierCurve bc = new BezierCurve(rainbow, lastEnd, lastEnd.add(lastDirection), end.subtract(direction), end);
             //add the bezier curve to the scene and list
             slides.add(bc);
             //this is the new ending location and direction
@@ -410,7 +417,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      */
     public static void putItHere(Spatial it, BezierCurve spline, float weight, float rotation) {
         //get the location and direction at the specified location
-        Vector3f l = spline.getLocation(weight), d = spline.getDirection(weight);
+        Vector3f l = spline.getLocation(weight);
+        Quaternion rot = getRotation(spline, weight, rotation);
+        it.setLocalRotation(rot);
+        it.setLocalTranslation(l);
+    }
+
+    public static Quaternion getRotation(BezierCurve spline, float weight, float rotation) {
+        Vector3f d = spline.getDirection(weight);
         //determine the rotation along x and y
         float xrot = FastMath.atan(d.y / d.z);
         float yrot = FastMath.atan(d.x / d.z);
@@ -420,8 +434,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         //this is the direction the spatial is facing
         rot = rot.mult(new Quaternion().fromAngleAxis(-xrot, Vector3f.UNIT_X));
         rot = rot.mult(new Quaternion().fromAngleAxis(yrot, Vector3f.UNIT_Y));
-        it.setLocalRotation(rot);
-        it.setLocalTranslation(l);
+        return rot;
     }
 
     public void onAnalog(String name, float value, float tpf) {

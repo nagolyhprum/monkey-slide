@@ -7,11 +7,15 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Quaternion;
+import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
+import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
+import com.jme3.scene.VertexBuffer.Type;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.scene.shape.Sphere;
+import com.jme3.util.BufferUtils;
 import java.util.Random;
 
 public class BezierCurve extends Node {
@@ -30,7 +34,7 @@ public class BezierCurve extends Node {
         this.controlB = controlB;
         this.end = end;
         this.mat = mat;
-        addSpline(mat, start, controlA, controlB, end);
+        addMeshSpline(mat);
     }
 
     public Vector3f getDirection(float weight) {
@@ -41,35 +45,56 @@ public class BezierCurve extends Node {
         return getCubic(start, controlA, controlB, end, weight);
     }
 
-    /**
-     *
-     * @param mat colored spline
-     * @param node to attach the spline to
-     * @param start position of the spline
-     * @param controlA smoothness factor
-     * @param controlB smoothness factor
-     * @param end position of the spline
-     */
-    private void addSpline(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
-        int overdo = 5;
-        float weight = ADD_WEIGHT * overdo;
-        while (weight < 1 - ADD_WEIGHT * overdo) {
-            Vector3f a = getCubic(start, controlA, controlB, end, weight - ADD_WEIGHT * overdo),
-                    b = getCubic(start, controlA, controlB, end, weight + ADD_WEIGHT * overdo);
-            Geometry g = new Geometry("slide", new Cylinder(12, 12, RADIUS, 1, false));
-            g.setMaterial(mat);
-            setConnectiveTransform(new float[]{a.x, a.y, a.z}, new float[]{b.x, b.y, b.z}, g);
-            this.attachChild(g);
-            weight = weight + ADD_WEIGHT;
+    private void addMeshSpline(Material mat) {
+        //init
+        float step = 0.01f;
+        int samples = 10;
+        int vi = 0, tci = 0, ii = 0;
+        Vector3f[] vertices = new Vector3f[(int) (samples * 1 / step) + samples];
+        Vector2f[] textureCoordinates = new Vector2f[(int) (1 / step * samples * 2) * 3];
+        int[] indices = new int[(int) (1 / step * samples * 2) * 3];
+        Vector3f base = new Vector3f(0, 1, 0);
+        for (int i = 0; i < samples; i++) {
+            float yRot = FastMath.TWO_PI / samples * i;
+            vertices[vi++] = Main.getRotation(this, 0, yRot).mult(base).add(getLocation(0));
         }
-        Geometry s = new Geometry("start", new Sphere(32, 32, RADIUS));
-        s.setLocalTranslation(start);
-        s.setMaterial(mat);
-        this.attachChild(s);
-        s = new Geometry("end", new Sphere(32, 32, RADIUS));
-        s.setLocalTranslation(end);
-        s.setMaterial(mat);
-        this.attachChild(s);
+        //done initializing
+        int steps = 1, toDo = (int) (1 / step);
+        for (; steps <= toDo; steps++) {
+            float f = (float) steps / toDo;
+            //create the points
+            for (int i = 0; i < samples; i++) {
+                float yRot = FastMath.TWO_PI / samples * i;
+                vertices[vi++] = Main.getRotation(this, f, yRot).mult(base).add(getLocation(f));
+            }
+            //connect and texture the points
+            for (int i = 0; i < samples; i++) {
+                //connect base to next
+                textureCoordinates[tci++] = new Vector2f((float) i / samples, f - step);
+                textureCoordinates[tci++] = new Vector2f((float) i / samples, f);
+                textureCoordinates[tci++] = new Vector2f((float) (i + 1) / samples, f - step);
+                indices[ii++] = i + (steps - 1) * samples;
+                indices[ii++] = samples + i + (steps - 1) * samples;
+                indices[ii++] = (i + 1) % samples + (steps - 1) * samples;
+                //connect next to base                
+                textureCoordinates[tci++] = new Vector2f((float) i / samples, f);
+                textureCoordinates[tci++] = new Vector2f((float) (i + 1) / samples, f);
+                textureCoordinates[tci++] = new Vector2f((float) (i + 1) / samples, f - step);
+                indices[ii++] = samples + i + (steps - 1) * samples;
+                indices[ii++] = (i + 1) % samples + samples + (steps - 1) * samples;
+                indices[ii++] = (i + 1) % samples + (steps - 1) * samples;
+            }
+        }
+
+        Mesh mesh = new Mesh();
+        mesh.setBuffer(Type.Position, 3, BufferUtils.createFloatBuffer(vertices));
+        mesh.setBuffer(Type.TexCoord, 2, BufferUtils.createFloatBuffer(textureCoordinates));
+        mesh.setBuffer(Type.Index, 3, BufferUtils.createIntBuffer(indices));
+        mesh.updateBound();
+
+        Geometry geo = new Geometry("spline", mesh);
+        geo.setMaterial(mat);
+        attachChild(geo);
     }
 
     public static Vector3f getDirection(Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end, float weight) {
