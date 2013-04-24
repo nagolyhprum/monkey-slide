@@ -9,6 +9,7 @@ import com.jme3.light.*;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.*;
+import com.jme3.niftygui.NiftyJmeDisplay;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
 import com.jme3.post.ssao.SSAOFilter;
@@ -22,10 +23,13 @@ import com.jme3.shadow.PssmShadowRenderer;
 import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture;
 import com.jme3.util.SkyFactory;
+import de.lessvoid.nifty.Nifty;
 import java.util.*;
+import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
+    private Nifty nifty;
     //the current hover
     private float hover;
     //the number of splines in existance
@@ -97,6 +101,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         return SINGLETON;
     }
 
+    public float getVolume() {
+        return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getVolume();
+    }
+
+    public float getGraphics() {
+        return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getGraphics();
+    }
+
     public void reset() {
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
@@ -121,6 +133,19 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     @Override
     public void simpleInitApp() {
+        
+        
+        NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
+        nifty = niftyDisplay.getNifty();
+        nifty.fromXml("Interface/rem.xml", "start");
+
+        // attach the nifty display to the gui view port as a processor
+        guiViewPort.addProcessor(niftyDisplay);
+
+        // disable the fly cam
+        flyCam.setEnabled(false);
+        inputManager.setCursorVisible(true);
+        
         //simple initialization
         random = new Random();
         slides = new ArrayList<BezierCurve>();
