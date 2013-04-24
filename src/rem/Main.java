@@ -64,7 +64,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the scale when the character is standing
     public static final float SCALE = 0.33f;
     //the forward movement speed of the character
-    public static final float FORWARD_SPEED = 0.35f;
+    public static final float FORWARD_SPEED = 0.6f;
     //the fall acceleration of the character
     public static final float GRAVITY = 9.8f;
     //initial velocity of a jump
@@ -83,7 +83,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private Material coinMat, //
             rainbow, //
             transparentMat; //
-    private PssmShadowRenderer pssmRenderer;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -133,8 +132,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     @Override
     public void simpleInitApp() {
-        
-        
+
+
         NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
         nifty = niftyDisplay.getNifty();
         nifty.fromXml("Interface/rem.xml", "start");
@@ -145,7 +144,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         // disable the fly cam
         flyCam.setEnabled(false);
         inputManager.setCursorVisible(true);
-        
+
         //simple initialization
         random = new Random();
         slides = new ArrayList<BezierCurve>();
@@ -176,16 +175,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         reset();
     }
 
-    public static Geometry makeWireBB(Spatial object) {
-        WireBox wb = new WireBox();
-        wb.fromBoundingBox((BoundingBox) object.getWorldBound());
-        Geometry geo = new Geometry("bb", wb);
-        Material red = new Material(SINGLETON.assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        red.setColor("Color", ColorRGBA.Red);
-        geo.setMaterial(red);
-        return geo;
-    }
-
     private void initCamera() {
         //set up the camera
         flyCam.setDragToRotate(true);
@@ -214,8 +203,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         Node bed = (Node) assetManager.loadModel("Models/hospital_bed_small/letto_small.j3o");
         bed.setName("bed");
 
-        Geometry wb = makeWireBB(bed);
-        bed.attachChild(wb);
 
         characterModel.attachChild(bed);
         characterModel.scale(SCALE);
@@ -246,14 +233,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lampNode.setLocalTranslation(lightPos);
         characterNode.attachChild(lampNode);
         lampNode.addControl(lightCon);
-        //SSAO  
-        /*
-         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
-         SSAOFilter ssaoFilter = new SSAOFilter(12.94f, 43.92f, 0.33f, 0.61f);
-         fpp.addFilter(ssaoFilter);
-         viewPort.addProcessor(fpp);
-         */
-
     }
 
     private void initMaterials() {
@@ -317,15 +296,11 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez = Obstacle.class.getDeclaredClasses();
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
-                Geometry wb;
                 try {
                     //create and place the obstacle
                     Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
                     putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                     bc.attachChild(node);
-                    wb = makeWireBB(node.getChild("obstacle"));
-                    wb.setLocalTransform(node.getChild("obstacle").getLocalTransform());
-                    node.attachChild(wb);
                     os.add(node);
                 } catch (Exception e) {
                     System.exit(1);
@@ -366,9 +341,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             coins.add(node);
             //place the coin
             putItHere(node, bc, i, start + progress * i);
-            Geometry wb = makeWireBB(coin);
-            wb.setLocalTranslation(coin.getLocalTranslation());
-            node.attachChild(wb);
         }
     }
 
