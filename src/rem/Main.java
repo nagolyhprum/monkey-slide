@@ -1,4 +1,4 @@
-package mygame;
+package rem;
 
 import com.jme3.app.SimpleApplication;
 import com.jme3.bounding.BoundingBox;
@@ -7,6 +7,7 @@ import com.jme3.input.*;
 import com.jme3.input.controls.*;
 import com.jme3.light.*;
 import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.math.*;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
@@ -75,7 +76,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
     private CameraNode camNode;
-    private Material coinMat, rainbow;
+    private Material coinMat, //
+            rainbow, //
+            transparentMat; //
     private PssmShadowRenderer pssmRenderer;
 
     public static void main(String[] args) {
@@ -218,11 +221,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lampNode.setLocalTranslation(lightPos);
         characterNode.attachChild(lampNode);
         lampNode.addControl(lightCon);
-        //SSAO
-        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
-        SSAOFilter ssaoFilter = new SSAOFilter(12.94f, 43.92f, 0.33f, 0.61f);
-        fpp.addFilter(ssaoFilter);
-        viewPort.addProcessor(fpp);
+        //SSAO  
+        /*
+         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
+         SSAOFilter ssaoFilter = new SSAOFilter(12.94f, 43.92f, 0.33f, 0.61f);
+         fpp.addFilter(ssaoFilter);
+         viewPort.addProcessor(fpp);
+         */
+
     }
 
     private void initMaterials() {
@@ -239,6 +245,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rainbow.setFloat("Shininess", 96);
         rainbow.setColor("Specular", ColorRGBA.White);
         rainbow.setColor("Diffuse", ColorRGBA.White);
+
+        transparentMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        ColorRGBA transparency = new ColorRGBA(1.0f, 1.0f, 1.0f, 0.1f);
+        transparentMat.setColor("Diffuse", transparency);
+        transparentMat.setColor("Ambient", transparency);
+        transparentMat.setBoolean("UseAlpha", true);
+        transparentMat.setBoolean("UseMaterialColors", true);
+        transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
     }
 
     private void initSkybox() {
@@ -385,7 +399,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 coins.remove(0);
                 obstacles.remove(0);
 
-                slides.get(0).alpha();
+                slides.get(0).setMat(transparentMat);
+                for (Node n : obstacles.get(0)) {
+                    for (Spatial s : n.getChildren()) {
+                        s.setMaterial(transparentMat);
+                    }
+                }
             }
             Spatial car = characterModel.getChild("bed");
             for (int i = 0; i < coins.get(1).size(); i++) {

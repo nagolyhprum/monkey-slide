@@ -1,4 +1,4 @@
-package mygame;
+package rem;
 
 import com.jme3.material.Material;
 import com.jme3.math.FastMath;

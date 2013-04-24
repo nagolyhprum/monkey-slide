@@ -1,4 +1,4 @@
-package mygame;
+package rem;
 
 import com.jme3.material.MatParam;
 import com.jme3.material.Material;
@@ -27,6 +27,7 @@ public class BezierCurve extends Node {
     //instance of spline points
     private Vector3f start, controlA, controlB, end;
     private Material mat;
+    private Geometry geo;
 
     public BezierCurve(Material mat, Vector3f start, Vector3f controlA, Vector3f controlB, Vector3f end) {
         this.start = start;
@@ -34,7 +35,7 @@ public class BezierCurve extends Node {
         this.controlB = controlB;
         this.end = end;
         this.mat = mat;
-        addMeshSpline(mat);
+        addMeshSpline();
     }
 
     public Vector3f getDirection(float weight) {
@@ -45,18 +46,26 @@ public class BezierCurve extends Node {
         return getCubic(start, controlA, controlB, end, weight);
     }
 
-    private void addMeshSpline(Material mat) {
+    private void addMeshSpline() {
         //init
         float step = 0.01f;
-        int samples = 10;
-        int vi = 0, tci = 0, ii = 0;
+        int samples = 32;
+        int vi = 0, tci = 0, ii = 0, ni = 0;
         Vector3f[] vertices = new Vector3f[(int) (samples * 1 / step) + samples];
         Vector2f[] textureCoordinates = new Vector2f[(int) (1 / step * samples * 2) * 3];
         int[] indices = new int[(int) (1 / step * samples * 2) * 3];
-        Vector3f base = new Vector3f(0, 1, 0);
+        float[] normals = new float[vertices.length * 3];
+        Vector3f base = new Vector3f(0, RADIUS, 0);
         for (int i = 0; i < samples; i++) {
             float yRot = FastMath.TWO_PI / samples * i;
-            vertices[vi++] = Main.getRotation(this, 0, yRot).mult(base).add(getLocation(0));
+            vertices[vi] = Main.getRotation(this, 0, yRot).mult(base).add(getLocation(0));
+            //normals
+            Vector3f normal = vertices[vi];
+            normal = normal.subtract(this.getLocation(0)).normalize();
+            normals[ni++] = normal.x;
+            normals[ni++] = normal.y;
+            normals[ni++] = normal.z;
+            vi++;
         }
         //done initializing
         int steps = 1, toDo = (int) (1 / step);
@@ -65,24 +74,28 @@ public class BezierCurve extends Node {
             //create the points
             for (int i = 0; i < samples; i++) {
                 float yRot = FastMath.TWO_PI / samples * i;
-                vertices[vi++] = Main.getRotation(this, f, yRot).mult(base).add(getLocation(f));
-            }
-            //connect and texture the points
-            for (int i = 0; i < samples; i++) {
+                vertices[vi] = Main.getRotation(this, f, yRot).mult(base).add(getLocation(f));
+                //normals
+                Vector3f normal = vertices[vi];
+                normal = normal.subtract(this.getLocation(f)).normalize();
+                normals[ni++] = normal.x;
+                normals[ni++] = normal.y;
+                normals[ni++] = normal.z;
+                vi++;
                 //connect base to next
-                textureCoordinates[tci++] = new Vector2f((float) i / samples, f - step);
-                textureCoordinates[tci++] = new Vector2f((float) i / samples, f);
-                textureCoordinates[tci++] = new Vector2f((float) (i + 1) / samples, f - step);
                 indices[ii++] = i + (steps - 1) * samples;
                 indices[ii++] = samples + i + (steps - 1) * samples;
                 indices[ii++] = (i + 1) % samples + (steps - 1) * samples;
+                textureCoordinates[tci++] = new Vector2f(((float) i) / samples, f - step);
+                textureCoordinates[tci++] = new Vector2f(((float) i) / samples, f);
+                textureCoordinates[tci++] = new Vector2f(((float) (i + 1)) / samples, f - step);
                 //connect next to base                
-                textureCoordinates[tci++] = new Vector2f((float) i / samples, f);
-                textureCoordinates[tci++] = new Vector2f((float) (i + 1) / samples, f);
-                textureCoordinates[tci++] = new Vector2f((float) (i + 1) / samples, f - step);
                 indices[ii++] = samples + i + (steps - 1) * samples;
                 indices[ii++] = (i + 1) % samples + samples + (steps - 1) * samples;
                 indices[ii++] = (i + 1) % samples + (steps - 1) * samples;
+                textureCoordinates[tci++] = new Vector2f(((float) i) / samples, f);
+                textureCoordinates[tci++] = new Vector2f(((float) (i + 1)) / samples, f);
+                textureCoordinates[tci++] = new Vector2f(((float) (i + 1)) / samples, f - step);
             }
         }
 
@@ -90,9 +103,10 @@ public class BezierCurve extends Node {
         mesh.setBuffer(Type.Position, 3, BufferUtils.createFloatBuffer(vertices));
         mesh.setBuffer(Type.TexCoord, 2, BufferUtils.createFloatBuffer(textureCoordinates));
         mesh.setBuffer(Type.Index, 3, BufferUtils.createIntBuffer(indices));
+        mesh.setBuffer(Type.Normal, 3, BufferUtils.createFloatBuffer(normals));
         mesh.updateBound();
 
-        Geometry geo = new Geometry("spline", mesh);
+        geo = new Geometry("spline", mesh);
         geo.setMaterial(mat);
         attachChild(geo);
     }
@@ -126,23 +140,6 @@ public class BezierCurve extends Node {
         return new Vector3f(x1 * (1 - weight) + x2 * weight, y1 * (1 - weight) + y2 * weight, z1 * (1 - weight) + z2 * weight);
     }
 
-    private static void setConnectiveTransform(float[] p1, float[] p2, Geometry c) {
-        // 1. direction
-        Vector3f u = new Vector3f(p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]);
-        float length = u.length();
-        u = u.normalize();
-        // 2. rotation matrix
-        Vector3f v = u.cross(Vector3f.UNIT_Z);
-        Vector3f w = v.cross(u);
-        Matrix3f m = new Matrix3f(w.x, v.x, u.x, w.y, v.y, u.y, w.z, v.z, u.z);
-        c.setLocalRotation(m);
-        // 3. scaling
-        c.setLocalScale(1, 1, length);
-        // 4. translation
-        float[] center = {(p1[0] + p2[0]) / 2f, (p1[1] + p2[1]) / 2f, (p1[2] + p2[2]) / 2f};
-        c.setLocalTranslation(center[0], center[1], center[2]);
-    }
-
     public static Vector3f generateLandmark(Vector3f min, Random random) {
         return new Vector3f(min.x + (random.nextFloat() - 0.5f) * 20, min.y + (random.nextFloat() - 0.5f) * 20, min.z + 10);
     }
@@ -154,13 +151,8 @@ public class BezierCurve extends Node {
         return rot.mult(lastDirection);
     }
 
-    public void alpha() {
-        MatParam param = this.mat.getParam("Diffuse");
-        ColorRGBA color = (ColorRGBA) param.getValue();
-        color = color.set(color.r, color.g, color.b, 0.1f);
-        mat.setColor("Diffuse", color);
-        mat.setColor("Ambient", new ColorRGBA(1.0f, 1.0f, 1.0f, 0.1f));
-        mat.setBoolean("UseAlpha", true);
-        mat.getAdditionalRenderState().setBlendMode(BlendMode.Alpha);
+    public void setMat(Material mat) {
+        this.mat = mat;
+        geo.setMaterial(mat);
     }
 }
