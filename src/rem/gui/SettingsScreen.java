@@ -6,7 +6,7 @@ public class SettingsScreen extends SimpleScreen {
 
     private float volume = 100;
     private float graphics = 50;
-    private float prevVolume, preGraphics;
+    private float prevVolume, prevGraphics;
 
     public float getVolume() {
         return volume;
@@ -19,7 +19,7 @@ public class SettingsScreen extends SimpleScreen {
     @Override
     public void onStartScreen() {
         prevVolume = volume;
-        preGraphics = graphics;
+        prevGraphics = graphics;
     }
 
     @Override
@@ -38,7 +38,13 @@ public class SettingsScreen extends SimpleScreen {
 
     public void cancel() {
         volume = prevVolume;
-        graphics = preGraphics;
+        graphics = prevGraphics;
+        
+        Scrollbar graphicsControl = (Scrollbar) nifty.getCurrentScreen().findElementByName("graphics").getAttachedInputControl().getController();
+        Scrollbar volumeControl = (Scrollbar) nifty.getCurrentScreen().findElementByName("volume").getAttachedInputControl().getController();
+        
+        volumeControl.setValue(volume);
+        graphicsControl.setValue(graphics);
         nifty.gotoScreen("start");
     }
 }
