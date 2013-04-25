@@ -70,7 +70,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the scale when the character is standing
     public static final float SCALE = 0.33f;
     //the forward movement speed of the character
-    public static final float FORWARD_SPEED = 0.6f;
+    public static final float FORWARD_SPEED = 0.4f;
     //the fall acceleration of the character
     public static final float GRAVITY = 9.8f;
     //initial velocity of a jump
@@ -269,8 +269,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         fog.setFogDistance(10);
         fog.setFogDensity(1.0f);
         fpp.addFilter(fog);
-        viewPort.addProcessor(fpp);
-
+        //viewPort.addProcessor(fpp);
     }
 
     private void initSkybox() {
@@ -311,11 +310,22 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class};
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
                 try {
-                    //create and place the obstacle
-                    Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
-                    putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
-                    bc.attachChild(node);
-                    os.add(node);
+                    if (clazz.equals(Dodge.class)) {
+                        //add coins to certain locations
+                        for (float j = 0.10f; j <= 0.85; j += 0.15) {
+                            //create and place the obstacle
+                            Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
+                            putItHere(node, bc, j, FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                            bc.attachChild(node);
+                            os.add(node);
+                        }
+                    } else {
+                        //create and place the obstacle
+                        Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
+                        putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                        bc.attachChild(node);
+                        os.add(node);
+                    }
                 } catch (Exception e) {
                     throw new Error(e);
                 }
@@ -340,21 +350,17 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      */
     public void addCoins(BezierCurve bc, Material mat, ArrayList<Node> coins) {
         //which rotation do we start
-        float start = TURN_SPEED * FastMath.rand.nextFloat(),
-                //how fast does the rotation go?
-                progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
+        float start = TURN_SPEED * FastMath.rand.nextFloat();
+        //how fast does the rotation go?
+        float progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
         //add coins to certain locations
         for (float i = 0.25f; i <= 0.75; i += 0.05) {
             //create the coin
-            Geometry coin = new Geometry("coin", new Cylinder(32, 32, 0.5f, 0.05f, true));
-            coin.setLocalTranslation(0, BezierCurve.RADIUS + 1f, 0);
-            coin.setMaterial(mat);
-            Node node = new Node();
-            node.attachChild(coin);
-            bc.attachChild(node);
-            coins.add(node);
+            Coin c = new Coin(mat);
+            bc.attachChild(c);
+            coins.add(c);
             //place the coin
-            putItHere(node, bc, i, start + progress * i);
+            putItHere(c, bc, i, start + progress * i);
         }
     }
 
@@ -421,10 +427,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             for (int i = 0; i < coins.get(1).size(); i++) {
                 Spatial coin = coins.get(1).get(i).getChild("coin");
                 if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                    Coin c = (Coin) coins.get(1).get(i);
                     System.out.println("points!");
-                    coin.getParent().removeFromParent();
-                    coins.get(1).remove(i);
-                    i--;
+                    c.setCollected(true);
                 }
             }
             for (int i = 0; i < obstacles.get(1).size(); i++) {
@@ -432,6 +437,24 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                     System.out.println("dead!");
                     reset();
+                }
+            }
+            //update all obstacles
+            for (ArrayList<Node> al : obstacles) {
+                for (Node n : al) {
+                    Obstacle ob = (Obstacle) n;
+                    ob.update(tpf);
+                }
+            }
+            //update all coins
+            for (ArrayList<Node> al : coins) {
+                for (int i = al.size() - 1; i >= 0; i--) {
+                    Coin c = (Coin) al.get(i);
+                    c.update(tpf);
+                    if (c.isDead()) {
+                        c.removeFromParent();
+                        al.remove(i);
+                    }
                 }
             }
         }
@@ -476,10 +499,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void onAction(String name, boolean keyPressed, float tpf) {
-        if ("duck".equals(name) && !isDucking) {
+        if ("duck".equals(name) && !isDucking && !isJumping) {
             isDucking = keyPressed;
             yVelocity = DUCK_POWER;
-        } else if ("jump".equals(name) && !isJumping) {
+        } else if ("jump".equals(name) && !isDucking && !isJumping) {
             isJumping = keyPressed;
             yVelocity = JUMP_POWER;
         } else if ("reset".equals(name)) {
