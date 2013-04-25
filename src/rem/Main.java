@@ -3,6 +3,8 @@ package rem;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.collision.CollisionResults;
+import com.jme3.effect.ParticleEmitter;
+import com.jme3.effect.ParticleMesh;
 import com.jme3.input.*;
 import com.jme3.input.controls.*;
 import com.jme3.light.*;
@@ -12,6 +14,7 @@ import com.jme3.math.*;
 import com.jme3.niftygui.NiftyJmeDisplay;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
+import com.jme3.post.filters.FogFilter;
 import com.jme3.post.ssao.SSAOFilter;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.*;
@@ -25,6 +28,9 @@ import com.jme3.texture.Texture;
 import com.jme3.util.SkyFactory;
 import de.lessvoid.nifty.Nifty;
 import java.util.*;
+import rem.Obstacle.Dodge;
+import rem.Obstacle.Duck;
+import rem.Obstacle.Jump;
 import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
@@ -203,7 +209,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         Node bed = (Node) assetManager.loadModel("Models/hospital_bed_small/letto_small.j3o");
         bed.setName("bed");
 
-
         characterModel.attachChild(bed);
         characterModel.scale(SCALE);
         characterNode.attachChild(characterModel);
@@ -257,6 +262,15 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         transparentMat.setBoolean("UseAlpha", true);
         transparentMat.setBoolean("UseMaterialColors", true);
         transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
+
+        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
+        FogFilter fog = new FogFilter();
+        fog.setFogColor(new ColorRGBA(0.9f, 0.9f, 0.9f, 0.9f));
+        fog.setFogDistance(10);
+        fog.setFogDensity(1.0f);
+        fpp.addFilter(fog);
+        viewPort.addProcessor(fpp);
+
     }
 
     private void initSkybox() {
@@ -294,7 +308,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             ArrayList<Node> cs = new ArrayList<Node>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
-                Class[] clazzez = Obstacle.class.getDeclaredClasses();
+                Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class};
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
                 try {
                     //create and place the obstacle
@@ -303,7 +317,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     bc.attachChild(node);
                     os.add(node);
                 } catch (Exception e) {
-                    System.exit(1);
+                    throw new Error(e);
                 }
             } else if (slides.size() > 1) { //if this is not the first slide or a slide with obstacles           
                 addCoins(bc, coinMat, cs); //then add coins to it
@@ -414,7 +428,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 }
             }
             for (int i = 0; i < obstacles.get(1).size(); i++) {
-                Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
+                Spatial obstacle = obstacles.get(1).get(i);
                 if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                     System.out.println("dead!");
                     reset();

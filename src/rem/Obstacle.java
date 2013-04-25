@@ -4,43 +4,83 @@ import com.jme3.material.Material;
 import com.jme3.math.FastMath;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
-import com.jme3.scene.shape.Cylinder;
+import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Torus;
 
 public class Obstacle extends Node {
 
+    private Obstacle() {
+        setName("obstacle");
+    }
+
     public static class Jump extends Obstacle {
 
         public Jump(Material mat) {
-            Geometry geo = new Geometry("obstacle", new Cylinder(32, 32, BezierCurve.RADIUS + 0.75f, 1, true));
-            geo.setMaterial(mat);
-            attachChild(geo);
+
+            Spatial a = Main.getInstance().getAssetManager().loadModel("Models/grave/grave2.j3o");
+            a.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            Spatial b = Main.getInstance().getAssetManager().loadModel("Models/grave/grave3.j3o");
+            b.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            Spatial c = Main.getInstance().getAssetManager().loadModel("Models/grave/grave2.j3o");
+            c.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            Spatial d = Main.getInstance().getAssetManager().loadModel("Models/grave/grave3.j3o");
+            d.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            //crosses            
+            for (int i = 0; i < 4; i++) {
+                Spatial cross = Main.getInstance().getAssetManager().loadModel("Models/grave/grave1.j3o");
+                cross.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+                Node n = new Node();
+                n.rotate(0, 0, FastMath.QUARTER_PI + FastMath.HALF_PI * i);
+                n.attachChild(cross);
+                attachChild(n);
+            }
+            //a
+            Node n = new Node();
+            n.rotate(0, 0, 0);
+            n.attachChild(a);
+            attachChild(n);
+            //b
+            n = new Node();
+            n.rotate(0, 0, FastMath.HALF_PI);
+            n.attachChild(b);
+            attachChild(n);
+            //c
+            n = new Node();
+            n.rotate(0, 0, FastMath.PI);
+            n.attachChild(c);
+            attachChild(n);
+            //d            
+            n = new Node();
+            n.rotate(0, 0, FastMath.HALF_PI * 3);
+            n.attachChild(d);
+            attachChild(n);
         }
     }
 
     public static class Duck extends Obstacle {
 
         public Duck(Material mat) {
-            Geometry geo = new Geometry("obstacle", new Torus(32, 32, 0.5f, BezierCurve.RADIUS + 2f));
-            geo.setMaterial(mat);
-            attachChild(geo);
-            geo = new Geometry("obstacle", new Torus(32, 32, 0.5f, BezierCurve.RADIUS + 3f));
-            geo.setMaterial(mat);
-            attachChild(geo);
-            geo = new Geometry("obstacle", new Torus(32, 32, 0.5f, BezierCurve.RADIUS + 4f));
-            geo.setMaterial(mat);
-            attachChild(geo);
+            int birds = 10;
+            for (int i = 0; i < birds; i++) {
+                Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/bird/bird.j3o");
+                geo.rotate(0, FastMath.HALF_PI, 0);
+                geo.setLocalTranslation(0, BezierCurve.RADIUS + 1, 0);
+                geo.scale(0.5f);
+                Node node = new Node();
+                node.attachChild(geo);
+                node.rotate(0, 0, FastMath.TWO_PI * i / birds);
+                attachChild(node);
+            }
         }
     }
 
     public static class Dodge extends Obstacle {
 
         public Dodge(Material mat) {
-            float height = 3;
-            Geometry geo = new Geometry("obstacle", new Cylinder(32, 32, BezierCurve.RADIUS, height, true));
-            geo.setMaterial(mat);
-            geo.setLocalTranslation(0, height / 2, 0);
-            geo.rotate(FastMath.HALF_PI, 0, 0);
+            Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
+            geo.scale(0.2f);
+            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            geo.rotate(0, FastMath.HALF_PI, 0);
             attachChild(geo);
         }
     }
