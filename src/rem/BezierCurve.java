@@ -48,8 +48,8 @@ public class BezierCurve extends Node {
 
     private void addMeshSpline() {
         //init
-        float step = 0.01f;
-        int samples = 32;
+        float step = 0.05f;
+        int samples = 12;
         int vi = 0, tci = 0, ii = 0, ni = 0;
         Vector3f[] vertices = new Vector3f[(int) (samples * 1 / step) + samples];
         Vector2f[] textureCoordinates = new Vector2f[vertices.length];
