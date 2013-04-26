@@ -3,6 +3,8 @@ package rem;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.collision.CollisionResults;
+import com.jme3.effect.ParticleEmitter;
+import com.jme3.effect.ParticleMesh;
 import com.jme3.input.*;
 import com.jme3.input.controls.*;
 import com.jme3.light.*;
@@ -12,6 +14,7 @@ import com.jme3.math.*;
 import com.jme3.niftygui.NiftyJmeDisplay;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
+import com.jme3.post.filters.FogFilter;
 import com.jme3.post.ssao.SSAOFilter;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.*;
@@ -25,10 +28,14 @@ import com.jme3.texture.Texture;
 import com.jme3.util.SkyFactory;
 import de.lessvoid.nifty.Nifty;
 import java.util.*;
+import rem.Obstacle.Dodge;
+import rem.Obstacle.Duck;
+import rem.Obstacle.Jump;
 import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
+    private Bedroom bedroom;
     private Nifty nifty;
     //the current hover
     private float hover;
@@ -64,7 +71,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the scale when the character is standing
     public static final float SCALE = 0.33f;
     //the forward movement speed of the character
-    public static final float FORWARD_SPEED = 0.35f;
+    public static final float FORWARD_SPEED = 0.4f;
     //the fall acceleration of the character
     public static final float GRAVITY = 9.8f;
     //initial velocity of a jump
@@ -79,11 +86,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isRunning;
     private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
-    private CameraNode camNode;
     private Material coinMat, //
             rainbow, //
             transparentMat; //
-    private PssmShadowRenderer pssmRenderer;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -113,7 +118,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
-
+        rotation = 0;
         hover = 0;
         y = 0;
         experienced = 0;
@@ -125,6 +130,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
         generateSlide(random, 6);
+        bedroom.assemble();
+        putItHere(bedroom, slides.get(1), 0, 0);
         isJumping = isDucking = false;
         isRunning = true;
         simpleUpdate(0);
@@ -133,8 +140,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     @Override
     public void simpleInitApp() {
-        
-        
+
+
         NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
         nifty = niftyDisplay.getNifty();
         nifty.fromXml("Interface/rem.xml", "start");
@@ -145,7 +152,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         // disable the fly cam
         flyCam.setEnabled(false);
         inputManager.setCursorVisible(true);
-        
+
+        bedroom = new Bedroom();
+        rootNode.attachChild(bedroom);
+
         //simple initialization
         random = new Random();
         slides = new ArrayList<BezierCurve>();
@@ -176,33 +186,11 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         reset();
     }
 
-    public static Geometry makeWireBB(Spatial object) {
-        WireBox wb = new WireBox();
-        wb.fromBoundingBox((BoundingBox) object.getWorldBound());
-        Geometry geo = new Geometry("bb", wb);
-        Material red = new Material(SINGLETON.assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        red.setColor("Color", ColorRGBA.Red);
-        geo.setMaterial(red);
-        return geo;
-    }
-
     private void initCamera() {
         //set up the camera
         flyCam.setDragToRotate(true);
-        flyCam.setMoveSpeed(50);
+        flyCam.setMoveSpeed(10);
         flyCam.setEnabled(!debugMode);
-        //create the camera Node
-        camNode = new CameraNode("Camera Node", cam);
-        //This mode means that camera copies the movements of the target:
-        camNode.setControlDir(ControlDirection.SpatialToCamera);
-        //Attach the camNode to the target:
-        if (!debugMode) {
-            characterNode.attachChild(camNode);
-        }
-        //Move camNode, e.g. behind and above the target:
-        camNode.setLocalTranslation(new Vector3f(0, 5, -10));
-        //Rotate the camNode to look at the target:
-        camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
     }
 
     private void initCharacter() {
@@ -213,9 +201,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
         Node bed = (Node) assetManager.loadModel("Models/hospital_bed_small/letto_small.j3o");
         bed.setName("bed");
-
-        Geometry wb = makeWireBB(bed);
-        bed.attachChild(wb);
 
         characterModel.attachChild(bed);
         characterModel.scale(SCALE);
@@ -246,14 +231,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lampNode.setLocalTranslation(lightPos);
         characterNode.attachChild(lampNode);
         lampNode.addControl(lightCon);
-        //SSAO  
-        /*
-         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
-         SSAOFilter ssaoFilter = new SSAOFilter(12.94f, 43.92f, 0.33f, 0.61f);
-         fpp.addFilter(ssaoFilter);
-         viewPort.addProcessor(fpp);
-         */
-
     }
 
     private void initMaterials() {
@@ -278,6 +255,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         transparentMat.setBoolean("UseAlpha", true);
         transparentMat.setBoolean("UseMaterialColors", true);
         transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
+
+        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
+        FogFilter fog = new FogFilter();
+        fog.setFogColor(new ColorRGBA(0.9f, 0.9f, 0.9f, 0.9f));
+        fog.setFogDistance(10);
+        fog.setFogDensity(1.0f);
+        fpp.addFilter(fog);
+        //viewPort.addProcessor(fpp);
     }
 
     private void initSkybox() {
@@ -315,20 +300,27 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             ArrayList<Node> cs = new ArrayList<Node>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
-                Class[] clazzez = Obstacle.class.getDeclaredClasses();
+                Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class};
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
-                Geometry wb;
                 try {
-                    //create and place the obstacle
-                    Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
-                    putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
-                    bc.attachChild(node);
-                    wb = makeWireBB(node.getChild("obstacle"));
-                    wb.setLocalTransform(node.getChild("obstacle").getLocalTransform());
-                    node.attachChild(wb);
-                    os.add(node);
+                    if (clazz.equals(Dodge.class)) {
+                        //add coins to certain locations
+                        for (float j = 0.10f; j <= 0.85; j += 0.15) {
+                            //create and place the obstacle
+                            Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
+                            putItHere(node, bc, j, FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                            bc.attachChild(node);
+                            os.add(node);
+                        }
+                    } else {
+                        //create and place the obstacle
+                        Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
+                        putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                        bc.attachChild(node);
+                        os.add(node);
+                    }
                 } catch (Exception e) {
-                    System.exit(1);
+                    throw new Error(e);
                 }
             } else if (slides.size() > 1) { //if this is not the first slide or a slide with obstacles           
                 addCoins(bc, coinMat, cs); //then add coins to it
@@ -351,39 +343,22 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      */
     public void addCoins(BezierCurve bc, Material mat, ArrayList<Node> coins) {
         //which rotation do we start
-        float start = TURN_SPEED * FastMath.rand.nextFloat(),
-                //how fast does the rotation go?
-                progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
+        float start = TURN_SPEED * FastMath.rand.nextFloat();
+        //how fast does the rotation go?
+        float progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
         //add coins to certain locations
         for (float i = 0.25f; i <= 0.75; i += 0.05) {
             //create the coin
-            Geometry coin = new Geometry("coin", new Cylinder(32, 32, 0.5f, 0.05f, true));
-            coin.setLocalTranslation(0, BezierCurve.RADIUS + 1f, 0);
-            coin.setMaterial(mat);
-            Node node = new Node();
-            node.attachChild(coin);
-            bc.attachChild(node);
-            coins.add(node);
+            Coin c = new Coin(mat);
+            bc.attachChild(c);
+            coins.add(c);
             //place the coin
-            putItHere(node, bc, i, start + progress * i);
-            Geometry wb = makeWireBB(coin);
-            wb.setLocalTranslation(coin.getLocalTranslation());
-            node.attachChild(wb);
+            putItHere(c, bc, i, start + progress * i);
         }
     }
 
     @Override
     public void simpleUpdate(float tpf) {
-        if (debugMode) {
-            if (characterNode.hasChild(camNode)) {
-                characterNode.detachChild(camNode);
-            }
-        } else {
-            if (!(characterNode.hasChild(camNode))) {
-                characterNode.attachChild(camNode);
-            }
-        }
-        flyCam.setEnabled(debugMode);
         if (isRunning) {
             //set up the orientation of the player        
             hover += FastMath.PI * tpf;
@@ -435,20 +410,54 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             for (int i = 0; i < coins.get(1).size(); i++) {
                 Spatial coin = coins.get(1).get(i).getChild("coin");
                 if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                    Coin c = (Coin) coins.get(1).get(i);
                     System.out.println("points!");
-                    coin.getParent().removeFromParent();
-                    coins.get(1).remove(i);
-                    i--;
+                    c.setCollected(true);
                 }
             }
             for (int i = 0; i < obstacles.get(1).size(); i++) {
-                Spatial obstacle = obstacles.get(1).get(i).getChild("obstacle");
+                Spatial obstacle = obstacles.get(1).get(i);
                 if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                     System.out.println("dead!");
                     reset();
                 }
             }
+            //update all obstacles
+            for (ArrayList<Node> al : obstacles) {
+                for (Node n : al) {
+                    Obstacle ob = (Obstacle) n;
+                    ob.update(tpf);
+                }
+            }
+            //update all coins
+            for (ArrayList<Node> al : coins) {
+                for (int i = al.size() - 1; i >= 0; i--) {
+                    Coin c = (Coin) al.get(i);
+                    c.update(tpf);
+                    if (c.isDead()) {
+                        c.removeFromParent();
+                        al.remove(i);
+                    }
+                }
+            }
         }
+        if (!debugMode) {
+            Quaternion rot = getRotation(slides.get(1), 0, 0);
+            Vector3f translate = slides.get(1).getLocation(0);
+            //where to look
+            Vector3f look = rot.mult(new Vector3f(0, STANDING_Y, 0));
+            //where to move
+            Vector3f loc = rot.mult(new Vector3f(0, STANDING_Y + 1.5f, 0));
+            Vector3f yaxis = loc.subtract(look);
+            loc = new Quaternion().fromAngleAxis(FastMath.PI / 8, slides.get(1).getDirection(0)).mult(loc);
+            loc = new Quaternion().fromAngleAxis(-FastMath.PI / 8, yaxis).mult(loc);
+            look = look.add(translate);
+            loc = loc.add(translate);
+            //move and look
+            cam.setLocation(loc);
+            cam.lookAt(look, Vector3f.UNIT_Y);
+        }
+        flyCam.setEnabled(debugMode);
     }
 
     /**
@@ -490,17 +499,17 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void onAction(String name, boolean keyPressed, float tpf) {
-        if ("duck".equals(name) && !isDucking) {
+        if ("duck".equals(name) && !isDucking && !isJumping) {
             isDucking = keyPressed;
             yVelocity = DUCK_POWER;
-        } else if ("jump".equals(name) && !isJumping) {
+        } else if ("jump".equals(name) && !isDucking && !isJumping) {
             isJumping = keyPressed;
             yVelocity = JUMP_POWER;
         } else if ("reset".equals(name)) {
             reset();
         } else if ("start".equals(name)) {
             isRunning = true;
-        } else if ("debug".equals(name)) {
+        } else if ("debug".equals(name) && keyPressed) {
             debugMode = !debugMode;
         }
     }

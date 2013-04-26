@@ -51,14 +51,15 @@ public class BezierCurve extends Node {
         float step = 0.01f;
         int samples = 32;
         int vi = 0, tci = 0, ii = 0, ni = 0;
-        Vector3f[] vertices = new Vector3f[(int) (samples * 1 / step) + samples];
-        Vector2f[] textureCoordinates = new Vector2f[(int) (1 / step * samples * 2) * 3];
-        int[] indices = new int[(int) (1 / step * samples * 2) * 3];
+        Vector3f[] vertices = new Vector3f[(int) ((samples + 1) * (1 / step + 1))];
+        Vector2f[] textureCoordinates = new Vector2f[vertices.length];
+        int[] indices = new int[(int) (1 / step) * (samples + 1) * 2 * 3];
         float[] normals = new float[vertices.length * 3];
         Vector3f base = new Vector3f(0, RADIUS, 0);
-        for (int i = 0; i < samples; i++) {
+        for (int i = 0; i <= samples; i++) {
             float yRot = FastMath.TWO_PI / samples * i;
             vertices[vi] = Main.getRotation(this, 0, yRot).mult(base).add(getLocation(0));
+            textureCoordinates[tci++] = new Vector2f(((float) i) / samples, 0);
             //normals
             Vector3f normal = vertices[vi];
             normal = normal.subtract(this.getLocation(0)).normalize();
@@ -72,30 +73,25 @@ public class BezierCurve extends Node {
         for (; steps <= toDo; steps++) {
             float f = (float) steps / toDo;
             //create the points
-            for (int i = 0; i < samples; i++) {
+            for (int i = 0; i <= samples; i++) {
                 float yRot = FastMath.TWO_PI / samples * i;
                 vertices[vi] = Main.getRotation(this, f, yRot).mult(base).add(getLocation(f));
                 //normals
                 Vector3f normal = vertices[vi];
+                textureCoordinates[tci++] = new Vector2f(((float) i) / samples, f);
                 normal = normal.subtract(this.getLocation(f)).normalize();
                 normals[ni++] = normal.x;
                 normals[ni++] = normal.y;
                 normals[ni++] = normal.z;
                 vi++;
                 //connect base to next
-                indices[ii++] = i + (steps - 1) * samples;
-                indices[ii++] = samples + i + (steps - 1) * samples;
-                indices[ii++] = (i + 1) % samples + (steps - 1) * samples;
-                textureCoordinates[tci++] = new Vector2f(((float) i) / samples, f - step);
-                textureCoordinates[tci++] = new Vector2f(((float) i) / samples, f);
-                textureCoordinates[tci++] = new Vector2f(((float) (i + 1)) / samples, f - step);
+                indices[ii++] = (steps - 1) * (samples + 1) + i;
+                indices[ii++] = (steps) * (samples + 1) + i;
+                indices[ii++] = (steps - 1) * (samples + 1) + 1 + i;
                 //connect next to base                
-                indices[ii++] = samples + i + (steps - 1) * samples;
-                indices[ii++] = (i + 1) % samples + samples + (steps - 1) * samples;
-                indices[ii++] = (i + 1) % samples + (steps - 1) * samples;
-                textureCoordinates[tci++] = new Vector2f(((float) i) / samples, f);
-                textureCoordinates[tci++] = new Vector2f(((float) (i + 1)) / samples, f);
-                textureCoordinates[tci++] = new Vector2f(((float) (i + 1)) / samples, f - step);
+                indices[ii++] = (steps) * (samples + 1) + i;
+                indices[ii++] = (steps) * (samples + 1) + 1 + i;
+                indices[ii++] = (steps - 1) * (samples + 1) + 1 + i;
             }
         }
 
