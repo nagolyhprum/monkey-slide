@@ -89,6 +89,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private Material coinMat, //
             rainbow, //
             transparentMat; //
+    private boolean isCameraTweening;
+    private Vector3f cameraStartTween;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -118,6 +120,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
+        characterNode.detachChildNamed("Camera Node");
         rotation = 0;
         hover = 0;
         y = 0;
@@ -255,14 +258,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         transparentMat.setBoolean("UseAlpha", true);
         transparentMat.setBoolean("UseMaterialColors", true);
         transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
-
-        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
-        FogFilter fog = new FogFilter();
-        fog.setFogColor(new ColorRGBA(0.9f, 0.9f, 0.9f, 0.9f));
-        fog.setFogDistance(10);
-        fog.setFogDensity(1.0f);
-        fpp.addFilter(fog);
-        //viewPort.addProcessor(fpp);
     }
 
     private void initSkybox() {
@@ -360,88 +355,112 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     @Override
     public void simpleUpdate(float tpf) {
         if (isRunning) {
-            //set up the orientation of the player        
-            hover += FastMath.PI * tpf;
-            if (isDucking) {
-                y -= yVelocity * tpf;
-                yVelocity -= GRAVITY * tpf;
-                if (y >= 0) {
-                    isDucking = false;
-                }
-                characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
-            } else if (isJumping) {
-                y += yVelocity * tpf;
-                yVelocity -= GRAVITY * tpf;
-                if (y <= 0) {
-                    isJumping = false;
-                }
-                characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
-            } else {
-                float ty = this.y;
-                if (ty != 0) {
-                    ty -= tpf * FastMath.abs(ty) / ty;
-                }
-                if ((FastMath.abs(ty) / ty) != (FastMath.abs(y) / y)) {
-                    ty = 0;
-                }
-                y = ty;
-                characterModel.setLocalTranslation(0, STANDING_Y + y + FastMath.sin(hover) * 0.125f, 0);
-            }
-            if (!slides.isEmpty()) {
-                putItHere(path, slides.get(1), location, rotation);
-            }
-            location += tpf * FORWARD_SPEED;
-            while (location >= 1) {
-                generateSlide(random, 1);
-                location -= 1;
-                rootNode.detachChild(slides.get(0));
-                slides.remove(0);
-                coins.remove(0);
-                obstacles.remove(0);
+            if (isCameraTweening) {
+                Quaternion rot = getRotation(slides.get(1), 0, 0);
+                Vector3f translate = slides.get(1).getLocation(0);
+                Vector3f look = rot.mult(new Vector3f(0, STANDING_Y, 0));
+                look = look.add(translate);
 
-                slides.get(0).setMat(transparentMat);
-                for (Node n : obstacles.get(0)) {
-                    for (Spatial s : n.getChildren()) {
-                        s.setMaterial(transparentMat);
+                Vector3f tweenTo = new Vector3f(0, 5, -10);
+                tweenTo = getRotation(slides.get(1), 0, 0).mult(tweenTo);
+                tweenTo = tweenTo.add(translate);
+                cam.setLocation(cam.getLocation().add(tweenTo.subtract(cameraStartTween).mult(tpf)));
+                cam.lookAt(look, Vector3f.UNIT_Y);
+                if (tweenTo.subtract(cam.getLocation()).length() < 0.5f) {
+                    CameraNode camNode = new CameraNode("Camera Node", cam);
+                    //This mode means that camera copies the movements of the target:
+                    camNode.setControlDir(ControlDirection.SpatialToCamera);
+                    //Attach the camNode to the target:
+                    characterNode.attachChild(camNode);
+                    //Move camNode, e.g. behind and above the target:
+                    camNode.setLocalTranslation(new Vector3f(0, 5, -10));
+                    //Rotate the camNode to look at the target:
+                    camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
+                    isCameraTweening = false;
+                }
+            } else {
+                //set up the orientation of the player        
+                hover += FastMath.PI * tpf;
+                if (isDucking) {
+                    y -= yVelocity * tpf;
+                    yVelocity -= GRAVITY * tpf;
+                    if (y >= 0) {
+                        isDucking = false;
+                    }
+                    characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
+                } else if (isJumping) {
+                    y += yVelocity * tpf;
+                    yVelocity -= GRAVITY * tpf;
+                    if (y <= 0) {
+                        isJumping = false;
+                    }
+                    characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
+                } else {
+                    float ty = this.y;
+                    if (ty != 0) {
+                        ty -= tpf * FastMath.abs(ty) / ty;
+                    }
+                    if ((FastMath.abs(ty) / ty) != (FastMath.abs(y) / y)) {
+                        ty = 0;
+                    }
+                    y = ty;
+                    characterModel.setLocalTranslation(0, STANDING_Y + y + FastMath.sin(hover) * 0.125f, 0);
+                }
+                if (!slides.isEmpty()) {
+                    putItHere(path, slides.get(1), location, rotation);
+                }
+                location += tpf * FORWARD_SPEED;
+                while (location >= 1) {
+                    generateSlide(random, 1);
+                    location -= 1;
+                    rootNode.detachChild(slides.get(0));
+                    slides.remove(0);
+                    coins.remove(0);
+                    obstacles.remove(0);
+
+                    slides.get(0).setMat(transparentMat);
+                    for (Node n : obstacles.get(0)) {
+                        for (Spatial s : n.getChildren()) {
+                            s.setMaterial(transparentMat);
+                        }
+                    }
+                }
+                Spatial car = characterModel.getChild("bed");
+                for (int i = 0; i < coins.get(1).size(); i++) {
+                    Spatial coin = coins.get(1).get(i).getChild("coin");
+                    if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                        Coin c = (Coin) coins.get(1).get(i);
+                        System.out.println("points!");
+                        c.setCollected(true);
+                    }
+                }
+                for (int i = 0; i < obstacles.get(1).size(); i++) {
+                    Spatial obstacle = obstacles.get(1).get(i);
+                    if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                        System.out.println("dead!");
+                        reset();
+                    }
+                }
+                //update all obstacles
+                for (ArrayList<Node> al : obstacles) {
+                    for (Node n : al) {
+                        Obstacle ob = (Obstacle) n;
+                        ob.update(tpf);
+                    }
+                }
+                //update all coins
+                for (ArrayList<Node> al : coins) {
+                    for (int i = al.size() - 1; i >= 0; i--) {
+                        Coin c = (Coin) al.get(i);
+                        c.update(tpf);
+                        if (c.isDead()) {
+                            c.removeFromParent();
+                            al.remove(i);
+                        }
                     }
                 }
             }
-            Spatial car = characterModel.getChild("bed");
-            for (int i = 0; i < coins.get(1).size(); i++) {
-                Spatial coin = coins.get(1).get(i).getChild("coin");
-                if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                    Coin c = (Coin) coins.get(1).get(i);
-                    System.out.println("points!");
-                    c.setCollected(true);
-                }
-            }
-            for (int i = 0; i < obstacles.get(1).size(); i++) {
-                Spatial obstacle = obstacles.get(1).get(i);
-                if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                    System.out.println("dead!");
-                    reset();
-                }
-            }
-            //update all obstacles
-            for (ArrayList<Node> al : obstacles) {
-                for (Node n : al) {
-                    Obstacle ob = (Obstacle) n;
-                    ob.update(tpf);
-                }
-            }
-            //update all coins
-            for (ArrayList<Node> al : coins) {
-                for (int i = al.size() - 1; i >= 0; i--) {
-                    Coin c = (Coin) al.get(i);
-                    c.update(tpf);
-                    if (c.isDead()) {
-                        c.removeFromParent();
-                        al.remove(i);
-                    }
-                }
-            }
-        }
-        if (!debugMode) {
+        } else if (!debugMode) {
             Quaternion rot = getRotation(slides.get(1), 0, 0);
             Vector3f translate = slides.get(1).getLocation(0);
             //where to look
@@ -458,6 +477,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             cam.lookAt(look, Vector3f.UNIT_Y);
         }
         flyCam.setEnabled(debugMode);
+        bedroom.update(tpf);
     }
 
     /**
@@ -508,9 +528,20 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         } else if ("reset".equals(name)) {
             reset();
         } else if ("start".equals(name)) {
-            isRunning = true;
+            go();
         } else if ("debug".equals(name) && keyPressed) {
             debugMode = !debugMode;
+        }
+    }
+
+    public void go() {
+        if (!isCameraTweening) {
+            if (!bedroom.isExploding()) {
+                cameraStartTween = cam.getLocation();
+                isCameraTweening = true;
+            }
+            isRunning = !isRunning;
+            bedroom.explode();
         }
     }
 }

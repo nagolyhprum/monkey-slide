@@ -7,18 +7,18 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 
 public class Bedroom extends Node {
-    
+
     private Spatial leftWall, backWall, rightWall, furniture, floor;
     private boolean isExploding;
-    
+
     public Bedroom() {
         furniture = Main.getInstance().getAssetManager().loadModel("Models/House-set/House-set.j3o");
         furniture.setLocalScale(0.25f);
         attachChild(furniture);
-        
+
         Material wallPaper = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
         wallPaper.setTexture("ColorMap", Main.getInstance().getAssetManager().loadTexture("Textures/wall.png"));
-        
+
         Material woodenFloor = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
         woodenFloor.setTexture("ColorMap", Main.getInstance().getAssetManager().loadTexture("Textures/floor.png"));
         //wall 1 - left
@@ -39,7 +39,7 @@ public class Bedroom extends Node {
         attachChild(floor);
         assemble();
     }
-    
+
     public void assemble() {
         isExploding = false;
         furniture.setLocalTranslation(-0.5f, BezierCurve.RADIUS + 1, -0.25f);
@@ -48,16 +48,23 @@ public class Bedroom extends Node {
         backWall.setLocalTranslation(-0.85f, BezierCurve.RADIUS + 1.5f, 1f);
         floor.setLocalTranslation(-0.85f, BezierCurve.RADIUS + 1, 0);
     }
-    
+
     public void explode() {
         isExploding = true;
-    }    
-    
+    }
+
     public void update(float tpf) {
-        furniture.move(0, -tpf, 0);
-        floor.move(0, -tpf, 0);
-        leftWall.move(-tpf, 0, 0);
-        rightWall.move(tpf, 0, 0);
-        backWall.move(0, -tpf, 0);
+        if (isExploding) {
+            int speed = 10;
+            furniture.move(0, -tpf * speed, 0);
+            floor.move(0, -tpf * speed, 0);
+            leftWall.move(tpf * speed, 0, 0);
+            rightWall.move(-tpf * speed, 0, 0);
+            backWall.move(0, 0, tpf * speed);
+        }
+    }
+
+    public boolean isExploding() {
+        return isExploding;
     }
 }
