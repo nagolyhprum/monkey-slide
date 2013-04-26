@@ -86,7 +86,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isRunning;
     private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
-    private CameraNode camNode;
     private Material coinMat, //
             rainbow, //
             transparentMat; //
@@ -131,6 +130,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
         generateSlide(random, 6);
+        bedroom.assemble();
         putItHere(bedroom, slides.get(1), 0, 0);
         isJumping = isDucking = false;
         isRunning = true;
@@ -191,18 +191,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(10);
         flyCam.setEnabled(!debugMode);
-        //create the camera Node
-        camNode = new CameraNode("Camera Node", cam);
-        //This mode means that camera copies the movements of the target:
-        camNode.setControlDir(ControlDirection.SpatialToCamera);
-        //Attach the camNode to the target:
-        if (!debugMode) {
-            characterNode.attachChild(camNode);
-        }
-        //Move camNode, e.g. behind and above the target:
-        camNode.setLocalTranslation(new Vector3f(0, 5, -10));
-        //Rotate the camNode to look at the target:
-        camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
     }
 
     private void initCharacter() {
@@ -371,16 +359,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     @Override
     public void simpleUpdate(float tpf) {
-        if (debugMode) {
-            if (characterNode.hasChild(camNode)) {
-                characterNode.detachChild(camNode);
-            }
-        } else {
-            if (!(characterNode.hasChild(camNode))) {
-                characterNode.attachChild(camNode);
-            }
-        }
-        flyCam.setEnabled(debugMode);
         if (isRunning) {
             //set up the orientation of the player        
             hover += FastMath.PI * tpf;
@@ -463,6 +441,23 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 }
             }
         }
+        if (!debugMode) {
+            Quaternion rot = getRotation(slides.get(1), 0, 0);
+            Vector3f translate = slides.get(1).getLocation(0);
+            //where to look
+            Vector3f look = rot.mult(new Vector3f(0, STANDING_Y, 0));
+            //where to move
+            Vector3f loc = rot.mult(new Vector3f(0, STANDING_Y + 1.5f, 0));
+            Vector3f yaxis = loc.subtract(look);
+            loc = new Quaternion().fromAngleAxis(FastMath.PI / 8, slides.get(1).getDirection(0)).mult(loc);
+            loc = new Quaternion().fromAngleAxis(-FastMath.PI / 8, yaxis).mult(loc);
+            look = look.add(translate);
+            loc = loc.add(translate);
+            //move and look
+            cam.setLocation(loc);
+            cam.lookAt(look, Vector3f.UNIT_Y);
+        }
+        flyCam.setEnabled(debugMode);
     }
 
     /**
@@ -514,7 +509,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             reset();
         } else if ("start".equals(name)) {
             isRunning = true;
-        } else if ("debug".equals(name)) {
+        } else if ("debug".equals(name) && keyPressed) {
             debugMode = !debugMode;
         }
     }
