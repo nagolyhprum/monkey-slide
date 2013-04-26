@@ -35,6 +35,7 @@ import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
+    private Bedroom bedroom;
     private Nifty nifty;
     //the current hover
     private float hover;
@@ -118,7 +119,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
-
+        rotation = 0;
         hover = 0;
         y = 0;
         experienced = 0;
@@ -130,6 +131,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
         generateSlide(random, 6);
+        putItHere(bedroom, slides.get(1), 0, 0);
         isJumping = isDucking = false;
         isRunning = true;
         simpleUpdate(0);
@@ -150,6 +152,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         // disable the fly cam
         flyCam.setEnabled(false);
         inputManager.setCursorVisible(true);
+
+        bedroom = new Bedroom();
+        rootNode.attachChild(bedroom);
 
         //simple initialization
         random = new Random();
@@ -184,7 +189,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private void initCamera() {
         //set up the camera
         flyCam.setDragToRotate(true);
-        flyCam.setMoveSpeed(50);
+        flyCam.setMoveSpeed(10);
         flyCam.setEnabled(!debugMode);
         //create the camera Node
         camNode = new CameraNode("Camera Node", cam);
