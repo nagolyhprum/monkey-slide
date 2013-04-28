@@ -455,7 +455,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         }
         flyCam.setEnabled(debugMode);
         bedroom.update(tpf);
-        cameraNode.update();
+        if (!debugMode) {
+            cameraNode.update();
+        }
     }
 
     /**
