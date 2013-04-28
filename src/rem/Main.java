@@ -90,12 +90,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             rainbow, //
             transparentMat; //
     private boolean isCameraTweening;
-    private Vector3f cameraStartTween;
+    private MyCameraNode cameraNode;
+    private MySkyBox skyBox;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(2);
-        as.setResolution(1024, 768);
+        as.setResolution(640, 480);
         SINGLETON.setSettings(as);
         SINGLETON.setShowSettings(false);
         SINGLETON.start();
@@ -120,6 +121,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
+        skyBox.reset();
         characterNode.detachChildNamed("Camera Node");
         rotation = 0;
         hover = 0;
@@ -194,6 +196,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(10);
         flyCam.setEnabled(!debugMode);
+
+        cameraNode = new MyCameraNode(cam, characterModel, characterModel);
     }
 
     private void initCharacter() {
@@ -261,10 +265,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     private void initSkybox() {
-        Spatial skybox = SkyFactory.createSky(assetManager, "Textures/skybox/StarrySky.dds", false);
-        skybox.setCullHint(Spatial.CullHint.Never);
-        skybox.setLocalScale(50f);
-        characterNode.attachChild(skybox);
+        characterNode.attachChild(skyBox = new MySkyBox());
     }
 
     /**
@@ -356,26 +357,11 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public void simpleUpdate(float tpf) {
         if (isRunning) {
             if (isCameraTweening) {
-                Quaternion rot = getRotation(slides.get(1), 0, 0);
-                Vector3f translate = slides.get(1).getLocation(0);
-                Vector3f look = rot.mult(new Vector3f(0, STANDING_Y, 0));
-                look = look.add(translate);
-
-                Vector3f tweenTo = new Vector3f(0, 5, -10);
-                tweenTo = getRotation(slides.get(1), 0, 0).mult(tweenTo);
-                tweenTo = tweenTo.add(translate);
-                cam.setLocation(cam.getLocation().add(tweenTo.subtract(cameraStartTween).mult(tpf)));
-                cam.lookAt(look, Vector3f.UNIT_Y);
-                if (tweenTo.subtract(cam.getLocation()).length() < 0.5f) {
-                    CameraNode camNode = new CameraNode("Camera Node", cam);
-                    //This mode means that camera copies the movements of the target:
-                    camNode.setControlDir(ControlDirection.SpatialToCamera);
-                    //Attach the camNode to the target:
-                    characterNode.attachChild(camNode);
-                    //Move camNode, e.g. behind and above the target:
-                    camNode.setLocalTranslation(new Vector3f(0, 5, -10));
-                    //Rotate the camNode to look at the target:
-                    camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
+                Vector3f tweenTo = new Vector3f(0, 5, -5);
+                Vector3f translate = tweenTo.subtract(cameraNode.getLocalTranslation()).normalize().mult(tpf * 5);
+                cameraNode.move(translate);
+                if (tweenTo.subtract(cameraNode.getLocalTranslation()).length() < 0.1f) {
+                    cameraNode.setLocalTranslation(tweenTo);
                     isCameraTweening = false;
                 }
             } else {
@@ -430,15 +416,18 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     Spatial coin = coins.get(1).get(i).getChild("coin");
                     if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                         Coin c = (Coin) coins.get(1).get(i);
-                        System.out.println("points!");
                         c.setCollected(true);
                     }
                 }
                 for (int i = 0; i < obstacles.get(1).size(); i++) {
                     Spatial obstacle = obstacles.get(1).get(i);
                     if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                        System.out.println("dead!");
-                        reset();
+                        obstacle.removeFromParent();
+                        obstacles.get(1).remove(i);
+                        i--;
+                        if (!skyBox.brighter()) {
+                            reset();
+                        }
                     }
                 }
                 //update all obstacles
@@ -461,23 +450,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 }
             }
         } else if (!debugMode) {
-            Quaternion rot = getRotation(slides.get(1), 0, 0);
-            Vector3f translate = slides.get(1).getLocation(0);
-            //where to look
-            Vector3f look = rot.mult(new Vector3f(0, STANDING_Y, 0));
-            //where to move
-            Vector3f loc = rot.mult(new Vector3f(0, STANDING_Y + 1.5f, 0));
-            Vector3f yaxis = loc.subtract(look);
-            loc = new Quaternion().fromAngleAxis(FastMath.PI / 8, slides.get(1).getDirection(0)).mult(loc);
-            loc = new Quaternion().fromAngleAxis(-FastMath.PI / 8, yaxis).mult(loc);
-            look = look.add(translate);
-            loc = loc.add(translate);
-            //move and look
-            cam.setLocation(loc);
-            cam.lookAt(look, Vector3f.UNIT_Y);
+            cameraNode.setLocalTranslation(-1, 1, -1);
+            cameraNode.setLookOffset(new Vector3f(0, 0, 0));
         }
         flyCam.setEnabled(debugMode);
         bedroom.update(tpf);
+        cameraNode.update();
     }
 
     /**
@@ -528,20 +506,21 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         } else if ("reset".equals(name)) {
             reset();
         } else if ("start".equals(name)) {
-            go();
+            go(keyPressed);
         } else if ("debug".equals(name) && keyPressed) {
             debugMode = !debugMode;
         }
     }
 
-    public void go() {
-        if (!isCameraTweening) {
-            if (!bedroom.isExploding()) {
-                cameraStartTween = cam.getLocation();
-                isCameraTweening = true;
+    public void go(boolean down) {
+        if (down) {
+            if (!isCameraTweening) {
+                if (!bedroom.isExploding()) {
+                    isCameraTweening = true;
+                }
+                isRunning = !isRunning;
+                bedroom.explode();
             }
-            isRunning = !isRunning;
-            bedroom.explode();
         }
     }
 }
