@@ -449,7 +449,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     }
                 }
             }
-        } else if (!debugMode) {
+        } else if (!debugMode && !bedroom.isExploding()) {
             cameraNode.setLocalTranslation(-1, 1, -1);
             cameraNode.setLookOffset(new Vector3f(0, 0, 0));
         }
