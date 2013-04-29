@@ -212,7 +212,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     
     private void initActionAudio() {
         jump = new AudioNode(assetManager, "Sound/action/jump.ogg");
-        duck = new AudioNode(assetManager, "Sound/action/jump.ogg");
+        duck = new AudioNode(assetManager, "Sound/action/duck.wav");
     }
 
     private void initCamera() {
