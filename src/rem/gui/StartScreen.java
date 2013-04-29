@@ -7,13 +7,10 @@ public class StartScreen extends SimpleScreen {
 
     private AudioNode sleep;
 
-    public StartScreen() {
-    }
-
     @Override
     public void onStartScreen() {
         Main game = Main.getInstance();
-        sleep = new AudioNode(game.getAssetManager(), "Sound/storybook.wav", false);
+        sleep = new AudioNode(game.getAssetManager(), "Sound/background/storybook.wav", false);
         sleep.setLooping(true);
         sleep.play();
     }

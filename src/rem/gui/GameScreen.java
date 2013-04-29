@@ -10,7 +10,7 @@ public class GameScreen extends SimpleScreen {
     @Override
     public void onStartScreen() {
         Main game = Main.getInstance();
-        action = new AudioNode(game.getAssetManager(), "Sound/railjet.wav", false);
+        action = new AudioNode(game.getAssetManager(), "Sound/background/railjet.wav", false);
         action.setLooping(true);
         action.play();
     }

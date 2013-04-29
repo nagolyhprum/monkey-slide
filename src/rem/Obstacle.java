@@ -16,6 +16,7 @@ public abstract class Obstacle extends Node {
     }
 
     abstract void update(float tpf);
+    abstract String audioName();
 
     public static class Jump extends Obstacle {
 
@@ -67,6 +68,10 @@ public abstract class Obstacle extends Node {
         @Override
         void update(float tpf) {
         }
+        
+        public String audioName() {
+            return "grunt";
+        }
     }
 
     public static class Duck extends Obstacle {
@@ -91,6 +96,10 @@ public abstract class Obstacle extends Node {
             roll.fromAngles(0, 0, FastMath.HALF_PI * tpf);
             this.rotate(roll);
         }
+        
+        public String audioName() {
+            return "birds";
+        }
     }
 
     public static class Dodge extends Obstacle {
@@ -105,6 +114,10 @@ public abstract class Obstacle extends Node {
 
         @Override
         void update(float tpf) {
+        }
+        
+        public String audioName() {
+            return "water";
         }
     }
 }

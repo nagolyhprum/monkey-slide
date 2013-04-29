@@ -28,6 +28,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     private Bedroom bedroom;
     private Nifty nifty;
+    private HashMap<String, AudioNode> obstacleAudio = new HashMap<String, AudioNode>();
     private AudioNode[] coinAudio = new AudioNode[10];
     //the current hover
     private float hover;
@@ -40,7 +41,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //these are the coins in memory
     private ArrayList<ArrayList<Node>> coins;
     //these are the obstacles in memory
-    private ArrayList<ArrayList<Node>> obstacles;
+    private ArrayList<ArrayList<Obstacle>> obstacles;
     //where is the character on the slide
     private float location = 0,
             //what is the characters rotation on the slide
@@ -143,6 +144,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
         initGUI();
         initSound();
+        initObstacleAudio();
 
         // disable the fly cam
         flyCam.setEnabled(false);
@@ -155,7 +157,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         random = new Random();
         slides = new ArrayList<BezierCurve>();
         coins = new ArrayList<ArrayList<Node>>();
-        obstacles = new ArrayList<ArrayList<Node>>();
+        obstacles = new ArrayList<ArrayList<Obstacle>>();
         //bloom postprocess filter for glow effects
         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
         BloomFilter bloom = new BloomFilter(BloomFilter.GlowMode.Objects);
@@ -202,6 +204,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     public void playCoin(int num) {
         coinAudio[num].playInstance();
+    }
+
+    private void initObstacleAudio() {
+        obstacleAudio.put("grunt", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
+        obstacleAudio.put("water", new AudioNode(assetManager, "Sound/obstacle/watersplash.wav"));
+        obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
     }
 
     private void initCamera() {
@@ -305,7 +313,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             //this is the new ending location and direction
             lastEnd = end;
             lastDirection = direction;
-            ArrayList<Node> os = new ArrayList<Node>();
+            ArrayList<Obstacle> os = new ArrayList<Obstacle>();
             ArrayList<Node> cs = new ArrayList<Node>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
@@ -316,14 +324,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                         //add coins to certain locations
                         for (float j = 0.10f; j <= 0.85; j += 0.15) {
                             //create and place the obstacle
-                            Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
+                            Obstacle node = (Obstacle) clazz.getConstructor(Material.class).newInstance(slideMat);
                             putItHere(node, bc, j, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                             bc.attachChild(node);
                             os.add(node);
                         }
                     } else {
                         //create and place the obstacle
-                        Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
+                        Obstacle node = (Obstacle) clazz.getConstructor(Material.class).newInstance(slideMat);
                         putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                         bc.attachChild(node);
                         os.add(node);
@@ -433,10 +441,11 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     }
                 }
                 for (int i = 0; i < obstacles.get(1).size(); i++) {
-                    Spatial obstacle = obstacles.get(1).get(i);
+                    Obstacle obstacle = obstacles.get(1).get(i);
                     if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                         obstacle.removeFromParent();
                         obstacles.get(1).remove(i);
+                        hitObstacle(obstacle.audioName());
                         i--;
                         if (!skyBox.brighter()) {
                             reset();
@@ -444,7 +453,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     }
                 }
                 //update all obstacles
-                for (ArrayList<Node> al : obstacles) {
+                for (ArrayList<Obstacle> al : obstacles) {
                     for (Node n : al) {
                         Obstacle ob = (Obstacle) n;
                         ob.update(tpf);
@@ -471,6 +480,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         if (!debugMode) {
             cameraNode.update();
         }
+    }
+
+    private void hitObstacle(String audioName) {
+        obstacleAudio.get(audioName).playInstance();
     }
 
     /**
