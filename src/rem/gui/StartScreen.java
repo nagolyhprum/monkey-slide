@@ -1,15 +1,26 @@
 package rem.gui;
 
+import com.jme3.audio.AudioNode;
 import rem.Main;
 
 public class StartScreen extends SimpleScreen {
 
+    private AudioNode sleep;
+
+    public StartScreen() {
+    }
+
     @Override
     public void onStartScreen() {
+        Main game = Main.getInstance();
+        sleep = new AudioNode(game.getAssetManager(), "Sound/storybook.wav", false);
+        sleep.setLooping(true);
+        sleep.play();
     }
 
     @Override
     public void onEndScreen() {
+        sleep.stop();
     }
 
     public void play() {
