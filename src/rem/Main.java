@@ -30,6 +30,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private Nifty nifty;
     private HashMap<String, AudioNode> obstacleAudio = new HashMap<String, AudioNode>();
     private AudioNode[] coinAudio = new AudioNode[10];
+    AudioNode jump, duck;
     //the current hover
     private float hover;
     //the number of splines in existance
@@ -106,10 +107,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getVolume();
     }
 
-    public float getGraphics() {
-        return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getGraphics();
-    }
-
     public void reset() {
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
@@ -145,6 +142,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         initGUI();
         initSound();
         initObstacleAudio();
+        initActionAudio();
 
         // disable the fly cam
         flyCam.setEnabled(false);
@@ -210,6 +208,11 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         obstacleAudio.put("grunt", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
         obstacleAudio.put("water", new AudioNode(assetManager, "Sound/obstacle/watersplash.wav"));
         obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
+    }
+    
+    private void initActionAudio() {
+        jump = new AudioNode(assetManager, "Sound/action/jump.ogg");
+        duck = new AudioNode(assetManager, "Sound/action/jump.ogg");
     }
 
     private void initCamera() {
@@ -526,9 +529,11 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     public void onAction(String name, boolean keyPressed, float tpf) {
         if ("duck".equals(name) && !isDucking && !isJumping) {
+            duck.playInstance();
             isDucking = keyPressed;
             yVelocity = DUCK_POWER;
         } else if ("jump".equals(name) && !isDucking && !isJumping) {
+            jump.playInstance();
             isJumping = keyPressed;
             yVelocity = JUMP_POWER;
         } else if ("reset".equals(name)) {

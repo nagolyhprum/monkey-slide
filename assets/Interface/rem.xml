@@ -30,8 +30,6 @@
                 <text font="Fonts/Arial-32.fnt" color="#000f" text="Settings" align="center" valign="center" />
             </panel>
             <panel height="50%" width="75%" align="center" childLayout="vertical" backgroundColor="#0f08">
-                <text font="aurulent-sans-16.fnt" color="#000f" text="Graphics" />
-                <control id="graphics" name="horizontalScrollbar" worldMax="100.0" worldPageSize="10.0" initial="${CALL.getGraphics()}" buttonStepSize="1.0" pageStepSize="10.0" />
                 <text font="aurulent-sans-16.fnt" color="#000f" text="Volume" />
                 <control id="volume" name="horizontalScrollbar" worldMax="100.0" worldPageSize="10.0" initial="${CALL.getVolume()}" buttonStepSize="1.0" pageStepSize="10.0" />
             </panel>
