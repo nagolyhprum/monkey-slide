@@ -90,7 +90,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(2);
-        as.setResolution(640, 480);
+        as.setResolution(800, 600);
         SINGLETON.setSettings(as);
         SINGLETON.setShowSettings(false);
         SINGLETON.start();
@@ -207,7 +207,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private void initObstacleAudio() {
         obstacleAudio.put("grunt", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
         obstacleAudio.put("water", new AudioNode(assetManager, "Sound/obstacle/watersplash.wav"));
-        obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
+        obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/chrip.wav"));
     }
     
     private void initActionAudio() {
