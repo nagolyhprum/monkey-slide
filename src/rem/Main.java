@@ -78,7 +78,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isDucking;
     private boolean isJumping;
     private boolean isRunning;
-    private boolean debugMode = false;
+    private boolean debugMode = true;
     private static final Main SINGLETON = new Main();
     private Material coinMat, //
             rainbow, //
@@ -230,7 +230,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         characterModel = new Node();
         characterNode = new Node();
 
-        Node bed = (Node) assetManager.loadModel("Models/hospital_bed_small/letto_small.j3o");
+        Node bed = (Node) assetManager.loadModel("Models/letto_small/letto_small.j3o");
         bed.setName("bed");
 
         characterModel.attachChild(bed);
