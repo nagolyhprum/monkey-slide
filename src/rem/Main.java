@@ -141,6 +141,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         isRunning = true;
         simpleUpdate(0);
         isRunning = false;
+        
+        nifty.gotoScreen("start");
+        
     }
 
     @Override

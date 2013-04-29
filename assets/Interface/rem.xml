@@ -16,7 +16,14 @@
             </panel>
         </layer>
     </screen>
-    <screen id="game" controller="rem.gui.GameScreen" />
+    <screen id="game" controller="rem.gui.GameScreen">
+        <layer id="background" childLayout="vertical">
+            <panel childLayout="horizontal">
+                <image width="32" height="32" filename="Interface/coin.png"></image>
+                <text font="Fonts/Arial-32.fnt" color="#ffffff" text="0" />
+            </panel>
+        </layer>
+    </screen>
     <screen id="settings" controller="rem.gui.SettingsScreen">
         <layer childLayout="vertical">
             <panel height="25%" width="75%" align="center" childLayout="center" backgroundColor="#f008">
