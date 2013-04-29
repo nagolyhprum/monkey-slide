@@ -20,7 +20,7 @@
         <layer id="background" childLayout="vertical">
             <panel childLayout="horizontal">
                 <image width="32" height="32" filename="Interface/coin.png"></image>
-                <text font="Fonts/Arial-32.fnt" color="#ffffff" text="0" />
+                <text id="score" font="Fonts/Arial-32.fnt" color="#ffffff" text="0" />
             </panel>
         </layer>
     </screen>
