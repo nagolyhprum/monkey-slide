@@ -1,10 +1,8 @@
 package rem;
 
 import com.jme3.app.SimpleApplication;
-import com.jme3.bounding.BoundingBox;
+import com.jme3.audio.AudioNode;
 import com.jme3.collision.CollisionResults;
-import com.jme3.effect.ParticleEmitter;
-import com.jme3.effect.ParticleMesh;
 import com.jme3.input.*;
 import com.jme3.input.controls.*;
 import com.jme3.light.*;
@@ -14,18 +12,11 @@ import com.jme3.math.*;
 import com.jme3.niftygui.NiftyJmeDisplay;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
-import com.jme3.post.filters.FogFilter;
-import com.jme3.post.ssao.SSAOFilter;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.*;
-import com.jme3.scene.control.CameraControl.ControlDirection;
 import com.jme3.scene.control.LightControl;
-import com.jme3.scene.debug.WireBox;
-import com.jme3.scene.shape.*;
-import com.jme3.shadow.PssmShadowRenderer;
 import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture;
-import com.jme3.util.SkyFactory;
 import de.lessvoid.nifty.Nifty;
 import java.util.*;
 import rem.Obstacle.Dodge;
@@ -35,7 +26,11 @@ import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
+    private Bedroom bedroom;
     private Nifty nifty;
+    private HashMap<String, AudioNode> obstacleAudio = new HashMap<String, AudioNode>();
+    private AudioNode[] coinAudio = new AudioNode[10];
+    AudioNode jump, duck;
     //the current hover
     private float hover;
     //the number of splines in existance
@@ -47,7 +42,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //these are the coins in memory
     private ArrayList<ArrayList<Node>> coins;
     //these are the obstacles in memory
-    private ArrayList<ArrayList<Node>> obstacles;
+    private ArrayList<ArrayList<Obstacle>> obstacles;
     //where is the character on the slide
     private float location = 0,
             //what is the characters rotation on the slide
@@ -70,7 +65,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //the scale when the character is standing
     public static final float SCALE = 0.33f;
     //the forward movement speed of the character
-    public static final float FORWARD_SPEED = 0.6f;
+    public static final float FORWARD_SPEED = 0.4f;
     //the fall acceleration of the character
     public static final float GRAVITY = 9.8f;
     //initial velocity of a jump
@@ -85,15 +80,17 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isRunning;
     private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
-    private CameraNode camNode;
     private Material coinMat, //
             rainbow, //
             transparentMat; //
+    private boolean isCameraTweening;
+    private MyCameraNode cameraNode;
+    private MySkyBox skyBox;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(2);
-        as.setResolution(1024, 768);
+        as.setResolution(640, 480);
         SINGLETON.setSettings(as);
         SINGLETON.setShowSettings(false);
         SINGLETON.start();
@@ -110,15 +107,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getVolume();
     }
 
-    public float getGraphics() {
-        return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getGraphics();
-    }
-
     public void reset() {
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
-
+        skyBox.reset();
+        characterNode.detachChildNamed("Camera Node");
+        rotation = 0;
         hover = 0;
         y = 0;
         experienced = 0;
@@ -130,32 +125,37 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
         generateSlide(random, 6);
+        bedroom.assemble();
+        putItHere(bedroom, slides.get(1), 0, 0);
         isJumping = isDucking = false;
         isRunning = true;
         simpleUpdate(0);
         isRunning = false;
+
+        nifty.gotoScreen("start");
+
     }
 
     @Override
     public void simpleInitApp() {
 
-
-        NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
-        nifty = niftyDisplay.getNifty();
-        nifty.fromXml("Interface/rem.xml", "start");
-
-        // attach the nifty display to the gui view port as a processor
-        guiViewPort.addProcessor(niftyDisplay);
+        initGUI();
+        initSound();
+        initObstacleAudio();
+        initActionAudio();
 
         // disable the fly cam
         flyCam.setEnabled(false);
         inputManager.setCursorVisible(true);
 
+        bedroom = new Bedroom();
+        rootNode.attachChild(bedroom);
+
         //simple initialization
         random = new Random();
         slides = new ArrayList<BezierCurve>();
         coins = new ArrayList<ArrayList<Node>>();
-        obstacles = new ArrayList<ArrayList<Node>>();
+        obstacles = new ArrayList<ArrayList<Obstacle>>();
         //bloom postprocess filter for glow effects
         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
         BloomFilter bloom = new BloomFilter(BloomFilter.GlowMode.Objects);
@@ -181,23 +181,47 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         reset();
     }
 
+    public void initGUI() {
+        NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
+        nifty = niftyDisplay.getNifty();
+        nifty.fromXml("Interface/rem.xml", "start");
+
+        // attach the nifty display to the gui view port as a processor
+        guiViewPort.addProcessor(niftyDisplay);
+    }
+
+    public void initSound() {
+        for (int i = 1; i <= 10; i++) {
+            coinAudio[i - 1] = new AudioNode(assetManager, String.format("Sound/coin/coin%s.wav", i), false);
+        }
+    }
+
+    public void playCoin() {
+        playCoin((int) (Math.random() * coinAudio.length));
+    }
+
+    public void playCoin(int num) {
+        coinAudio[num].playInstance();
+    }
+
+    private void initObstacleAudio() {
+        obstacleAudio.put("grunt", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
+        obstacleAudio.put("water", new AudioNode(assetManager, "Sound/obstacle/watersplash.wav"));
+        obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
+    }
+    
+    private void initActionAudio() {
+        jump = new AudioNode(assetManager, "Sound/action/jump.ogg");
+        duck = new AudioNode(assetManager, "Sound/action/duck.wav");
+    }
+
     private void initCamera() {
         //set up the camera
         flyCam.setDragToRotate(true);
-        flyCam.setMoveSpeed(50);
+        flyCam.setMoveSpeed(10);
         flyCam.setEnabled(!debugMode);
-        //create the camera Node
-        camNode = new CameraNode("Camera Node", cam);
-        //This mode means that camera copies the movements of the target:
-        camNode.setControlDir(ControlDirection.SpatialToCamera);
-        //Attach the camNode to the target:
-        if (!debugMode) {
-            characterNode.attachChild(camNode);
-        }
-        //Move camNode, e.g. behind and above the target:
-        camNode.setLocalTranslation(new Vector3f(0, 5, -10));
-        //Rotate the camNode to look at the target:
-        camNode.lookAt(characterNode.getLocalTranslation(), Vector3f.UNIT_Y);
+
+        cameraNode = new MyCameraNode(cam, characterModel, characterModel);
     }
 
     private void initCharacter() {
@@ -262,22 +286,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         transparentMat.setBoolean("UseAlpha", true);
         transparentMat.setBoolean("UseMaterialColors", true);
         transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
-
-        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
-        FogFilter fog = new FogFilter();
-        fog.setFogColor(new ColorRGBA(0.9f, 0.9f, 0.9f, 0.9f));
-        fog.setFogDistance(10);
-        fog.setFogDensity(1.0f);
-        fpp.addFilter(fog);
-        viewPort.addProcessor(fpp);
-
     }
 
     private void initSkybox() {
-        Spatial skybox = SkyFactory.createSky(assetManager, "Textures/skybox/StarrySky.dds", false);
-        skybox.setCullHint(Spatial.CullHint.Never);
-        skybox.setLocalScale(50f);
-        characterNode.attachChild(skybox);
+        characterNode.attachChild(skyBox = new MySkyBox());
     }
 
     /**
@@ -304,18 +316,29 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             //this is the new ending location and direction
             lastEnd = end;
             lastDirection = direction;
-            ArrayList<Node> os = new ArrayList<Node>();
+            ArrayList<Obstacle> os = new ArrayList<Obstacle>();
             ArrayList<Node> cs = new ArrayList<Node>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class};
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
                 try {
-                    //create and place the obstacle
-                    Node node = (Node) clazz.getConstructor(Material.class).newInstance(slideMat);
-                    putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
-                    bc.attachChild(node);
-                    os.add(node);
+                    if (clazz.equals(Dodge.class)) {
+                        //add coins to certain locations
+                        for (float j = 0.10f; j <= 0.85; j += 0.15) {
+                            //create and place the obstacle
+                            Obstacle node = (Obstacle) clazz.getConstructor(Material.class).newInstance(slideMat);
+                            putItHere(node, bc, j, FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                            bc.attachChild(node);
+                            os.add(node);
+                        }
+                    } else {
+                        //create and place the obstacle
+                        Obstacle node = (Obstacle) clazz.getConstructor(Material.class).newInstance(slideMat);
+                        putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                        bc.attachChild(node);
+                        os.add(node);
+                    }
                 } catch (Exception e) {
                     throw new Error(e);
                 }
@@ -340,101 +363,130 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      */
     public void addCoins(BezierCurve bc, Material mat, ArrayList<Node> coins) {
         //which rotation do we start
-        float start = TURN_SPEED * FastMath.rand.nextFloat(),
-                //how fast does the rotation go?
-                progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
+        float start = TURN_SPEED * FastMath.rand.nextFloat();
+        //how fast does the rotation go?
+        float progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
         //add coins to certain locations
         for (float i = 0.25f; i <= 0.75; i += 0.05) {
             //create the coin
-            Geometry coin = new Geometry("coin", new Cylinder(32, 32, 0.5f, 0.05f, true));
-            coin.setLocalTranslation(0, BezierCurve.RADIUS + 1f, 0);
-            coin.setMaterial(mat);
-            Node node = new Node();
-            node.attachChild(coin);
-            bc.attachChild(node);
-            coins.add(node);
+            Coin c = new Coin(mat);
+            bc.attachChild(c);
+            coins.add(c);
             //place the coin
-            putItHere(node, bc, i, start + progress * i);
+            putItHere(c, bc, i, start + progress * i);
         }
     }
 
     @Override
     public void simpleUpdate(float tpf) {
-        if (debugMode) {
-            if (characterNode.hasChild(camNode)) {
-                characterNode.detachChild(camNode);
-            }
-        } else {
-            if (!(characterNode.hasChild(camNode))) {
-                characterNode.attachChild(camNode);
-            }
-        }
-        flyCam.setEnabled(debugMode);
         if (isRunning) {
-            //set up the orientation of the player        
-            hover += FastMath.PI * tpf;
-            if (isDucking) {
-                y -= yVelocity * tpf;
-                yVelocity -= GRAVITY * tpf;
-                if (y >= 0) {
-                    isDucking = false;
+            if (isCameraTweening) {
+                Vector3f tweenTo = new Vector3f(0, 5, -5);
+                Vector3f translate = tweenTo.subtract(cameraNode.getLocalTranslation()).normalize().mult(tpf * 5);
+                cameraNode.move(translate);
+                if (tweenTo.subtract(cameraNode.getLocalTranslation()).length() < 0.1f) {
+                    cameraNode.setLocalTranslation(tweenTo);
+                    isCameraTweening = false;
                 }
-                characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
-            } else if (isJumping) {
-                y += yVelocity * tpf;
-                yVelocity -= GRAVITY * tpf;
-                if (y <= 0) {
-                    isJumping = false;
-                }
-                characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
             } else {
-                float ty = this.y;
-                if (ty != 0) {
-                    ty -= tpf * FastMath.abs(ty) / ty;
+                //set up the orientation of the player        
+                hover += FastMath.PI * tpf;
+                if (isDucking) {
+                    y -= yVelocity * tpf;
+                    yVelocity -= GRAVITY * tpf;
+                    if (y >= 0) {
+                        isDucking = false;
+                    }
+                    characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
+                } else if (isJumping) {
+                    y += yVelocity * tpf;
+                    yVelocity -= GRAVITY * tpf;
+                    if (y <= 0) {
+                        isJumping = false;
+                    }
+                    characterModel.setLocalTranslation(0, STANDING_Y + y, 0);
+                } else {
+                    float ty = this.y;
+                    if (ty != 0) {
+                        ty -= tpf * FastMath.abs(ty) / ty;
+                    }
+                    if ((FastMath.abs(ty) / ty) != (FastMath.abs(y) / y)) {
+                        ty = 0;
+                    }
+                    y = ty;
+                    characterModel.setLocalTranslation(0, STANDING_Y + y + FastMath.sin(hover) * 0.125f, 0);
                 }
-                if ((FastMath.abs(ty) / ty) != (FastMath.abs(y) / y)) {
-                    ty = 0;
+                if (!slides.isEmpty()) {
+                    putItHere(path, slides.get(1), location, rotation);
                 }
-                y = ty;
-                characterModel.setLocalTranslation(0, STANDING_Y + y + FastMath.sin(hover) * 0.125f, 0);
-            }
-            if (!slides.isEmpty()) {
-                putItHere(path, slides.get(1), location, rotation);
-            }
-            location += tpf * FORWARD_SPEED;
-            while (location >= 1) {
-                generateSlide(random, 1);
-                location -= 1;
-                rootNode.detachChild(slides.get(0));
-                slides.remove(0);
-                coins.remove(0);
-                obstacles.remove(0);
+                location += tpf * FORWARD_SPEED;
+                while (location >= 1) {
+                    generateSlide(random, 1);
+                    location -= 1;
+                    rootNode.detachChild(slides.get(0));
+                    slides.remove(0);
+                    coins.remove(0);
+                    obstacles.remove(0);
 
-                slides.get(0).setMat(transparentMat);
-                for (Node n : obstacles.get(0)) {
-                    for (Spatial s : n.getChildren()) {
-                        s.setMaterial(transparentMat);
+                    slides.get(0).setMat(transparentMat);
+                    for (Node n : obstacles.get(0)) {
+                        for (Spatial s : n.getChildren()) {
+                            s.setMaterial(transparentMat);
+                        }
+                    }
+                }
+                Spatial car = characterModel.getChild("bed");
+                for (int i = 0; i < coins.get(1).size(); i++) {
+                    Spatial coin = coins.get(1).get(i).getChild("coin");
+                    if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                        Coin c = (Coin) coins.get(1).get(i);
+                        c.setCollected(true);
+                    }
+                }
+                for (int i = 0; i < obstacles.get(1).size(); i++) {
+                    Obstacle obstacle = obstacles.get(1).get(i);
+                    if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                        obstacle.removeFromParent();
+                        obstacles.get(1).remove(i);
+                        hitObstacle(obstacle.audioName());
+                        i--;
+                        if (!skyBox.brighter()) {
+                            reset();
+                        }
+                    }
+                }
+                //update all obstacles
+                for (ArrayList<Obstacle> al : obstacles) {
+                    for (Node n : al) {
+                        Obstacle ob = (Obstacle) n;
+                        ob.update(tpf);
+                    }
+                }
+                //update all coins
+                for (ArrayList<Node> al : coins) {
+                    for (int i = al.size() - 1; i >= 0; i--) {
+                        Coin c = (Coin) al.get(i);
+                        c.update(tpf);
+                        if (c.isDead()) {
+                            c.removeFromParent();
+                            al.remove(i);
+                        }
                     }
                 }
             }
-            Spatial car = characterModel.getChild("bed");
-            for (int i = 0; i < coins.get(1).size(); i++) {
-                Spatial coin = coins.get(1).get(i).getChild("coin");
-                if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                    System.out.println("points!");
-                    coin.getParent().removeFromParent();
-                    coins.get(1).remove(i);
-                    i--;
-                }
-            }
-            for (int i = 0; i < obstacles.get(1).size(); i++) {
-                Spatial obstacle = obstacles.get(1).get(i);
-                if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                    System.out.println("dead!");
-                    reset();
-                }
-            }
+        } else if (!debugMode && !bedroom.isExploding()) {
+            cameraNode.setLocalTranslation(-1, 1, -1);
+            cameraNode.setLookOffset(new Vector3f(0, 0, 0));
         }
+        flyCam.setEnabled(debugMode);
+        bedroom.update(tpf);
+        if (!debugMode) {
+            cameraNode.update();
+        }
+    }
+
+    private void hitObstacle(String audioName) {
+        obstacleAudio.get(audioName).playInstance();
     }
 
     /**
@@ -476,18 +528,32 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void onAction(String name, boolean keyPressed, float tpf) {
-        if ("duck".equals(name) && !isDucking) {
+        if ("duck".equals(name) && !isDucking && !isJumping) {
+            duck.playInstance();
             isDucking = keyPressed;
             yVelocity = DUCK_POWER;
-        } else if ("jump".equals(name) && !isJumping) {
+        } else if ("jump".equals(name) && !isDucking && !isJumping) {
+            jump.playInstance();
             isJumping = keyPressed;
             yVelocity = JUMP_POWER;
         } else if ("reset".equals(name)) {
             reset();
         } else if ("start".equals(name)) {
-            isRunning = true;
-        } else if ("debug".equals(name)) {
+            go(keyPressed);
+        } else if ("debug".equals(name) && keyPressed) {
             debugMode = !debugMode;
+        }
+    }
+
+    public void go(boolean down) {
+        if (down) {
+            if (!isCameraTweening) {
+                if (!bedroom.isExploding()) {
+                    isCameraTweening = true;
+                }
+                isRunning = !isRunning;
+                bedroom.explode();
+            }
         }
     }
 }

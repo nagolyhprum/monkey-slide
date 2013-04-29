@@ -16,15 +16,20 @@
             </panel>
         </layer>
     </screen>
-    <screen id="game" controller="rem.gui.GameScreen" />
+    <screen id="game" controller="rem.gui.GameScreen">
+        <layer id="background" childLayout="vertical">
+            <panel childLayout="horizontal">
+                <image width="32" height="32" filename="Interface/coin.png"></image>
+                <text id="score" font="Fonts/Arial-32.fnt" color="#ffffff" text="0" />
+            </panel>
+        </layer>
+    </screen>
     <screen id="settings" controller="rem.gui.SettingsScreen">
         <layer childLayout="vertical">
             <panel height="25%" width="75%" align="center" childLayout="center" backgroundColor="#f008">
                 <text font="Fonts/Arial-32.fnt" color="#000f" text="Settings" align="center" valign="center" />
             </panel>
             <panel height="50%" width="75%" align="center" childLayout="vertical" backgroundColor="#0f08">
-                <text font="aurulent-sans-16.fnt" color="#000f" text="Graphics" />
-                <control id="graphics" name="horizontalScrollbar" worldMax="100.0" worldPageSize="10.0" initial="${CALL.getGraphics()}" buttonStepSize="1.0" pageStepSize="10.0" />
                 <text font="aurulent-sans-16.fnt" color="#000f" text="Volume" />
                 <control id="volume" name="horizontalScrollbar" worldMax="100.0" worldPageSize="10.0" initial="${CALL.getVolume()}" buttonStepSize="1.0" pageStepSize="10.0" />
             </panel>
