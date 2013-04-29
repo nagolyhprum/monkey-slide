@@ -42,6 +42,9 @@ public class Coin extends Node {
     }
 
     public void setCollected(boolean isCollected) {
+        if(isCollected && !this.collected) {
+            Main.getInstance().playCoin();
+        }
         this.collected = isCollected;
     }
 

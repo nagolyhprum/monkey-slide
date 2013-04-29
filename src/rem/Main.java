@@ -1,10 +1,8 @@
 package rem;
 
 import com.jme3.app.SimpleApplication;
-import com.jme3.bounding.BoundingBox;
+import com.jme3.audio.AudioNode;
 import com.jme3.collision.CollisionResults;
-import com.jme3.effect.ParticleEmitter;
-import com.jme3.effect.ParticleMesh;
 import com.jme3.input.*;
 import com.jme3.input.controls.*;
 import com.jme3.light.*;
@@ -14,18 +12,11 @@ import com.jme3.math.*;
 import com.jme3.niftygui.NiftyJmeDisplay;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
-import com.jme3.post.filters.FogFilter;
-import com.jme3.post.ssao.SSAOFilter;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.*;
-import com.jme3.scene.control.CameraControl.ControlDirection;
 import com.jme3.scene.control.LightControl;
-import com.jme3.scene.debug.WireBox;
-import com.jme3.scene.shape.*;
-import com.jme3.shadow.PssmShadowRenderer;
 import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture;
-import com.jme3.util.SkyFactory;
 import de.lessvoid.nifty.Nifty;
 import java.util.*;
 import rem.Obstacle.Dodge;
@@ -37,6 +28,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     private Bedroom bedroom;
     private Nifty nifty;
+    private AudioNode[] coinAudio = new AudioNode[10];
     //the current hover
     private float hover;
     //the number of splines in existance
@@ -141,21 +133,16 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         isRunning = true;
         simpleUpdate(0);
         isRunning = false;
-        
+
         nifty.gotoScreen("start");
-        
+
     }
 
     @Override
     public void simpleInitApp() {
 
-
-        NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
-        nifty = niftyDisplay.getNifty();
-        nifty.fromXml("Interface/rem.xml", "start");
-
-        // attach the nifty display to the gui view port as a processor
-        guiViewPort.addProcessor(niftyDisplay);
+        initGUI();
+        initSound();
 
         // disable the fly cam
         flyCam.setEnabled(false);
@@ -192,6 +179,29 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         im.addListener(this, "clockwise", "counterclockwise");
         im.addListener(this, "duck", "jump", "reset", "start", "debug");
         reset();
+    }
+
+    public void initGUI() {
+        NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
+        nifty = niftyDisplay.getNifty();
+        nifty.fromXml("Interface/rem.xml", "start");
+
+        // attach the nifty display to the gui view port as a processor
+        guiViewPort.addProcessor(niftyDisplay);
+    }
+
+    public void initSound() {
+        for (int i = 1; i <= 10; i++) {
+            coinAudio[i - 1] = new AudioNode(assetManager, String.format("Sound/coin/coin%s.wav", i), false);
+        }
+    }
+
+    public void playCoin() {
+        playCoin((int) (Math.random() * coinAudio.length));
+    }
+
+    public void playCoin(int num) {
+        coinAudio[num].playInstance();
     }
 
     private void initCamera() {
