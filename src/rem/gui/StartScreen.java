@@ -11,6 +11,7 @@ public class StartScreen extends SimpleScreen {
     public void onStartScreen() {
         Main game = Main.getInstance();
         sleep = new AudioNode(game.getAssetManager(), "Sound/background/storybook.wav", false);
+        sleep.setVolume(0.33f);
         sleep.setLooping(true);
         sleep.play();
     }
