@@ -83,6 +83,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private Material coinMat; //
     private Material rainbow; //
     private Material transparentMat;
+    private Material redMat;
     private boolean isCameraTweening;
     private MyCameraNode cameraNode;
     private MySkyBox skyBox;
@@ -237,7 +238,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private void initCharacter() {
         //create the character
         path = new Node();
-        characterModel = new Bed(transparentMat);
+        characterModel = new Bed(redMat);
         characterNode = new Node();
 
 
@@ -291,7 +292,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rainbow = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         Texture texture = assetManager.loadTexture("Textures/rainbow.jpg");
         rainbow.setTexture("DiffuseMap", texture);
-        rainbow.setFloat("Shininess", 96);
+        rainbow.setFloat("Shininess", 32);
         rainbow.setColor("Specular", ColorRGBA.White);
         rainbow.setColor("Diffuse", ColorRGBA.White);
 
@@ -302,6 +303,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         transparentMat.setBoolean("UseAlpha", true);
         transparentMat.setBoolean("UseMaterialColors", true);
         transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
+        
+        redMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        redMat.setColor("Diffuse", ColorRGBA.Red);
+        redMat.setColor("Ambient", ColorRGBA.Red.mult(0.2f));
+        redMat.setColor("Specular", ColorRGBA.White);
+        rainbow.setFloat("Shininess", 64);
+        redMat.setBoolean("UseMaterialColors", true);
     }
 
     private void initSkybox() {
