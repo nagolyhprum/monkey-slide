@@ -55,7 +55,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     //these are all of the slides in memory
     private ArrayList<BezierCurve> slides;
     //these are the coins in memory
-    private ArrayList<ArrayList<Node>> coins;
+    private ArrayList<ArrayList<Coin>> coins;
     //these are the obstacles in memory
     private ArrayList<ArrayList<Obstacle>> obstacles;
     //where is the character on the slide
@@ -90,9 +90,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isHurt;
     private PointLight ceilingLamp;
     private PointLight primaryLight;
-    
     private boolean debugMode = false;
     private boolean motionSicknessSafeMode = false;
+    private int coinsCollected;
+    private float pointsCollected;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -118,6 +119,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void reset() {
+        Data.addToTotalCoins(coinsCollected);
+        Data.setHighscore((int) pointsCollected);
+        pointsCollected = 0;
+        coinsCollected = 0;
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
@@ -166,7 +171,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         //simple initialization
         random = new Random();
         slides = new ArrayList<BezierCurve>();
-        coins = new ArrayList<ArrayList<Node>>();
+        coins = new ArrayList<ArrayList<Coin>>();
         obstacles = new ArrayList<ArrayList<Obstacle>>();
         //bloom postprocess filter for glow effects
         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
@@ -303,7 +308,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         transparentMat.setBoolean("UseAlpha", true);
         transparentMat.setBoolean("UseMaterialColors", true);
         transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
-        
+
         redMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         redMat.setColor("Diffuse", ColorRGBA.Red);
         redMat.setColor("Ambient", ColorRGBA.Red.mult(0.2f));
@@ -336,7 +341,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             lastEnd = end;
             lastDirection = direction;
             ArrayList<Obstacle> os = new ArrayList<Obstacle>();
-            ArrayList<Node> cs = new ArrayList<Node>();
+            ArrayList<Coin> cs = new ArrayList<Coin>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class};
@@ -380,7 +385,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      * @param bc the bezier curve that the coins should follow
      * @param mat the material to be used for the coins
      */
-    public void addCoins(BezierCurve bc, Material mat, ArrayList<Node> coins) {
+    public void addCoins(BezierCurve bc, Material mat, ArrayList<Coin> coins) {
         //which rotation do we start
         float start = TURN_SPEED * FastMath.rand.nextFloat();
         //how fast does the rotation go?
@@ -458,12 +463,16 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                         }
                     }
                 }
+                pointsCollected += 100 * tpf;
                 Spatial car = characterModel.getChild("bed");
                 for (int i = 0; i < coins.get(1).size(); i++) {
                     Spatial coin = coins.get(1).get(i).getChild("coin");
                     if (coin.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
                         Coin c = (Coin) coins.get(1).get(i);
-                        c.setCollected(true);
+                        if (!c.isCollected()) {
+                            coinsCollected++;
+                            c.setCollected(true);
+                        }
                     }
                 }
                 if (!isHurt) {
@@ -491,7 +500,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     }
                 }
                 //update all coins
-                for (ArrayList<Node> al : coins) {
+                for (ArrayList<Coin> al : coins) {
                     for (int i = al.size() - 1; i >= 0; i--) {
                         Coin c = (Coin) al.get(i);
                         c.update(tpf);

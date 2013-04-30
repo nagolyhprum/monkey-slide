@@ -14,13 +14,13 @@ import com.jme3.util.BufferUtils;
 import com.jme3.util.SkyFactory;
 
 public class MySkyBox extends Node {
-    
+
     private Spatial brown, yellow, gray, blue, night;
     private Spatial[] brightness;
     private Spatial brown_nm, yellow_nm, gray_nm, blue_nm;
     private Spatial[] brightness_nm;
     private int index;
-    
+
     public MySkyBox() {
         setCullHint(Node.CullHint.Never);
         night = SkyFactory.createSky(Main.getInstance().getAssetManager(), "Textures/skybox/StarrySky.dds", false);
@@ -38,10 +38,10 @@ public class MySkyBox extends Node {
         brown_nm = generateSkyBox("brown");
         gray_nm = generateSkyBox("gray");
         blue_nm = generateSkyBox("blue");
-        brightness_nm = new Spatial[]{blue_nm, gray_nm, brown_nm, yellow_nm, night};
+        brightness_nm = new Spatial[]{blue_nm, yellow_nm, gray_nm, brown_nm, night};
         setLocalScale(50f);
     }
-    
+
     private Texture[] LoadTextures(String color) {
         Texture[] texs = new Texture[6];
         texs[1] = Main.getInstance().getAssetManager().loadTexture("Textures/skies/" + color + "cloud_lf.jpg");
@@ -52,7 +52,7 @@ public class MySkyBox extends Node {
         texs[5] = Main.getInstance().getAssetManager().loadTexture("Textures/skies/" + color + "cloud_dn.jpg");
         return texs;
     }
-    
+
     private Geometry generateSkyBox(String color) {
         Mesh mesh = new Mesh();
         Vector3f[] vertices = new Vector3f[24];
@@ -223,13 +223,13 @@ public class MySkyBox extends Node {
         indices[ii++] = 23;
         indices[ii++] = 22;
         indices[ii++] = 20;
-        
+
         mesh.setBuffer(VertexBuffer.Type.Position, 3, BufferUtils.createFloatBuffer(vertices));
         mesh.setBuffer(VertexBuffer.Type.TexCoord, 2, BufferUtils.createFloatBuffer(textureCoordinates));
         mesh.setBuffer(VertexBuffer.Type.Index, 3, BufferUtils.createIntBuffer(indices));
         mesh.setBuffer(VertexBuffer.Type.Normal, 3, BufferUtils.createFloatBuffer(normals));
         mesh.updateBound();
-        
+
         Geometry skybox = new Geometry("skybox", mesh);
         Material mat = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
         mat.setTexture("ColorMap", Main.getInstance().getAssetManager().loadTexture("Textures/skies/" + color + "cloud.jpg"));
@@ -237,19 +237,19 @@ public class MySkyBox extends Node {
         skybox.setCullHint(Node.CullHint.Never);
         return skybox;
     }
-    
+
     public void reset() {
         if (Main.getInstance().isMotionSicknessSafe()) {
             detachChild(brightness_nm[index]);
             index = brightness_nm.length - 1;
-            attachChild(brightness_nm[index]);            
+            attachChild(brightness_nm[index]);
         } else {
             detachChild(brightness[index]);
             index = brightness.length - 1;
             attachChild(brightness[index]);
         }
     }
-    
+
     public boolean brighter() {
         if (index > 0) {
             if (Main.getInstance().isMotionSicknessSafe()) {
@@ -266,7 +266,7 @@ public class MySkyBox extends Node {
         }
         return false;
     }
-    
+
     public boolean darker() {
         if (Main.getInstance().isMotionSicknessSafe()) {
             if (index + 1 < brightness_nm.length) {
