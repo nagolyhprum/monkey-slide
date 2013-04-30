@@ -20,7 +20,7 @@ public abstract class Obstacle extends Node {
 
     public static class Jump extends Obstacle {
 
-        public Jump(Material mat) {
+        public Jump() {
 
             Spatial a = Main.getInstance().getAssetManager().loadModel("Models/grave/grave2.j3o");
             a.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
@@ -76,12 +76,12 @@ public abstract class Obstacle extends Node {
 
     public static class Duck extends Obstacle {
 
-        public Duck(Material mat) {
+        public Duck() {
             int birds = 10;
             for (int i = 0; i < birds; i++) {
                 Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/bird/bird.j3o");
                 geo.rotate(0, FastMath.HALF_PI, 0);
-                geo.setLocalTranslation(0, BezierCurve.RADIUS + 1.3f, 0);
+                geo.setLocalTranslation(0, BezierCurve.RADIUS + 1f, 0);
                 geo.scale(0.5f);
                 Node node = new Node();
                 node.attachChild(geo);
@@ -104,7 +104,7 @@ public abstract class Obstacle extends Node {
 
     public static class Dodge extends Obstacle {
 
-        public Dodge(Material mat) {
+        public Dodge() {
             Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
             geo.scale(0.2f);
             geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);

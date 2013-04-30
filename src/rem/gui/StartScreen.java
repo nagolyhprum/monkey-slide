@@ -22,7 +22,7 @@ public class StartScreen extends SimpleScreen {
 
     public void play() {
         nifty.gotoScreen("game");
-        Main.getInstance().go(true);
+        Main.getInstance().go();
     }
 
     public void settings() {

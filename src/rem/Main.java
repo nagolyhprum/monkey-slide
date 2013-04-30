@@ -49,7 +49,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             rotation = 0;
     private Node path;
     private Node characterNode; //the parent node of the character
-    private Node characterModel; //this node only contains the camera and the character
+    private Bed characterModel; //this node only contains the camera and the character
     //the is where the last spline ends
     private Vector3f lastEnd,
             //this is the direction the last spline ends in
@@ -78,14 +78,15 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isDucking;
     private boolean isJumping;
     private boolean isRunning;
-    private boolean debugMode = true;
+    private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
     private Material coinMat, //
             rainbow, //
-            transparentMat; //
+            transparentMat;
     private boolean isCameraTweening;
     private MyCameraNode cameraNode;
     private MySkyBox skyBox;
+    private boolean isHurt;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -112,7 +113,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             rootNode.detachChild(bc);
         }
         skyBox.reset();
-        characterNode.detachChildNamed("Camera Node");
         rotation = 0;
         hover = 0;
         y = 0;
@@ -169,7 +169,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         initCamera();
         //create key events
         InputManager im = getInputManager();
-        im.addMapping("start", new KeyTrigger(KeyInput.KEY_U));
         im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_J));
         im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_L));
         im.addMapping("duck", new KeyTrigger(KeyInput.KEY_K));
@@ -177,7 +176,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         im.addMapping("reset", new KeyTrigger(KeyInput.KEY_O));
         im.addMapping("debug", new KeyTrigger(KeyInput.KEY_BACKSLASH));
         im.addListener(this, "clockwise", "counterclockwise");
-        im.addListener(this, "duck", "jump", "reset", "start", "debug");
+        im.addListener(this, "duck", "jump", "reset", "debug");
         reset();
     }
 
@@ -209,7 +208,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         obstacleAudio.put("water", new AudioNode(assetManager, "Sound/obstacle/watersplash.wav"));
         obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/chrip.wav"));
     }
-    
+
     private void initActionAudio() {
         jump = new AudioNode(assetManager, "Sound/action/jump.ogg");
         duck = new AudioNode(assetManager, "Sound/action/duck.wav");
@@ -227,13 +226,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private void initCharacter() {
         //create the character
         path = new Node();
-        characterModel = new Node();
+        characterModel = new Bed(transparentMat);
         characterNode = new Node();
 
-        Node bed = (Node) assetManager.loadModel("Models/letto_small/letto_small.j3o");
-        bed.setName("bed");
 
-        characterModel.attachChild(bed);
         characterModel.scale(SCALE);
         characterNode.attachChild(characterModel);
         path.attachChild(characterNode);
@@ -298,14 +294,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      * @param random number generator used when generating the next slide
      */
     public void generateSlide(Random random, int count) {
+        isHurt = false;
+        characterModel.heal();
         for (int i = 0; i < count; i++) {
-            //set up the material for this whole section
-            ColorRGBA slideColor = ColorRGBA.randomColor();
-            ColorRGBA slideAmbient = slideColor.mult(0.05f);
-            Material slideMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-            slideMat.setColor("Ambient", slideAmbient);
-            slideMat.setColor("Diffuse", slideColor);
-            slideMat.setBoolean("UseMaterialColors", true);
             //figure out how to set up the bezier curve
             Vector3f end = BezierCurve.generateLandmark(lastEnd, random);
             Vector3f direction = BezierCurve.generateDirection(random, lastDirection);
@@ -327,14 +318,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                         //add coins to certain locations
                         for (float j = 0.10f; j <= 0.85; j += 0.15) {
                             //create and place the obstacle
-                            Obstacle node = (Obstacle) clazz.getConstructor(Material.class).newInstance(slideMat);
+                            Obstacle node = (Obstacle) clazz.getConstructor().newInstance();
                             putItHere(node, bc, j, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                             bc.attachChild(node);
                             os.add(node);
                         }
                     } else {
                         //create and place the obstacle
-                        Obstacle node = (Obstacle) clazz.getConstructor(Material.class).newInstance(slideMat);
+                        Obstacle node = (Obstacle) clazz.getConstructor().newInstance();
                         putItHere(node, bc, FastMath.rand.nextFloat() * 0.8f + 0.1f, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                         bc.attachChild(node);
                         os.add(node);
@@ -443,15 +434,17 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                         c.setCollected(true);
                     }
                 }
-                for (int i = 0; i < obstacles.get(1).size(); i++) {
-                    Obstacle obstacle = obstacles.get(1).get(i);
-                    if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
-                        obstacle.removeFromParent();
-                        obstacles.get(1).remove(i);
-                        hitObstacle(obstacle.audioName());
-                        i--;
-                        if (!skyBox.brighter()) {
-                            reset();
+                if (!isHurt) {
+                    for (int i = 0; i < obstacles.get(1).size(); i++) {
+                        Obstacle obstacle = obstacles.get(1).get(i);
+                        if (obstacle.collideWith(car.getWorldBound(), new CollisionResults()) != 0) {
+                            hitObstacle(obstacle.audioName());
+                            isHurt = true;
+                            characterModel.hurt();
+                            if (!skyBox.brighter()) {
+                                reset();
+                                characterModel.wakeup();
+                            }
                         }
                     }
                 }
@@ -528,32 +521,31 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     public void onAction(String name, boolean keyPressed, float tpf) {
-        if ("duck".equals(name) && !isDucking && !isJumping) {
-            duck.playInstance();
-            isDucking = keyPressed;
-            yVelocity = DUCK_POWER;
-        } else if ("jump".equals(name) && !isDucking && !isJumping) {
-            jump.playInstance();
-            isJumping = keyPressed;
-            yVelocity = JUMP_POWER;
-        } else if ("reset".equals(name)) {
-            reset();
-        } else if ("start".equals(name)) {
-            go(keyPressed);
-        } else if ("debug".equals(name) && keyPressed) {
-            debugMode = !debugMode;
+        if (keyPressed) {
+            if ("duck".equals(name) && !isDucking && !isJumping) {
+                duck.playInstance();
+                isDucking = keyPressed;
+                yVelocity = DUCK_POWER;
+            } else if ("jump".equals(name) && !isDucking && !isJumping) {
+                jump.playInstance();
+                isJumping = keyPressed;
+                yVelocity = JUMP_POWER;
+            } else if ("reset".equals(name)) {
+                reset();
+            } else if ("debug".equals(name) && keyPressed) {
+                debugMode = !debugMode;
+            }
         }
     }
 
-    public void go(boolean down) {
-        if (down) {
-            if (!isCameraTweening) {
-                if (!bedroom.isExploding()) {
-                    isCameraTweening = true;
-                }
-                isRunning = !isRunning;
-                bedroom.explode();
+    public void go() {
+        if (!isCameraTweening) {
+            if (!bedroom.isExploding()) {
+                isCameraTweening = true;
+                characterModel.sleep();
             }
+            isRunning = !isRunning;
+            bedroom.explode();
         }
     }
 }
