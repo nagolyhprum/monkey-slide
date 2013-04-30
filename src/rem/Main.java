@@ -70,7 +70,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             //this is the direction the last spline ends in
             lastDirection;
     //this is the random number generator used to generate the splines
-    private Random random;
+    Random random;
     //the current y offset of the character
     private float y;
     //the current y velocity of the character
