@@ -26,11 +26,26 @@ import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
+    public static final ColorRGBA YELLOW_LIGHT_COLOR = new ColorRGBA(1.0f, 1.0f, 0.8f, 1.0f);
+    //the y coordinate when the character is standing
+    public static final float STANDING_Y = 2;
+    //the scale when the character is standing
+    public static final float SCALE = 0.33f;
+    //the forward movement speed of the character
+    public static final float FORWARD_SPEED = 0.33f;
+    //the fall acceleration of the character
+    public static final float GRAVITY = 9.8f;
+    //initial velocity of a jump
+    public static final float JUMP_POWER = 5.5f;
+    //rise speed for returning from duck position
+    public static final float HOVER_RISE = 1.5f;
+    //initial velocity of a duck
+    public static final float DUCK_POWER = 4f;
     private Bedroom bedroom;
     private Nifty nifty;
     private HashMap<String, AudioNode> obstacleAudio = new HashMap<String, AudioNode>();
     private AudioNode[] coinAudio = new AudioNode[10];
-    AudioNode jump, duck;
+    private AudioNode jump, duck;
     //the current hover
     private float hover;
     //the number of splines in existance
@@ -60,39 +75,30 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private float y;
     //the current y velocity of the character
     private float yVelocity;
-    //the y coordinate when the character is standing
-    public static final float STANDING_Y = 2;
-    //the scale when the character is standing
-    public static final float SCALE = 0.33f;
-    //the forward movement speed of the character
-    public static final float FORWARD_SPEED = 0.4f;
-    //the fall acceleration of the character
-    public static final float GRAVITY = 9.8f;
-    //initial velocity of a jump
-    public static final float JUMP_POWER = 5.5f;
-    //rise speed for returning from duck position
-    public static final float HOVER_RISE = 1.5f;
-    //initial velocity of a duck
-    public static final float DUCK_POWER = 4f;
     //is the character ducking?
     private boolean isDucking;
     private boolean isJumping;
     private boolean isRunning;
     private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
-    private Material coinMat, //
-            rainbow, //
-            transparentMat;
+    private Material coinMat; //
+    private Material rainbow; //
+    private Material  transparentMat;
     private boolean isCameraTweening;
     private MyCameraNode cameraNode;
     private MySkyBox skyBox;
     private boolean isHurt;
+    private PointLight ceilingLamp;
+    private PointLight primaryLight;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
-        as.setSamples(2);
-        as.setResolution(800, 600);
+        as.setSamples(4);
+        as.setResolution(1024, 768);
+        as.setFrameRate(60);
         SINGLETON.setSettings(as);
+        SINGLETON.setPauseOnLostFocus(true);
+        SINGLETON.setDisplayStatView(false);
         SINGLETON.setShowSettings(false);
         SINGLETON.start();
     }
@@ -125,8 +131,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
         generateSlide(random, 6);
-        bedroom.assemble();
         putItHere(bedroom, slides.get(1), 0, 0);
+        bedroom.assemble();
+        ceilingLamp.setColor(YELLOW_LIGHT_COLOR);
+        primaryLight.setRadius(50f);
         isJumping = isDucking = false;
         isRunning = true;
         simpleUpdate(0);
@@ -241,23 +249,32 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         AmbientLight ambient = new AmbientLight();
         ambient.setColor(ColorRGBA.White);
         rootNode.addLight(ambient);
-        /**
-         * A white, spot light source.
-         */
-        Vector3f charPos = characterModel.getWorldTranslation();
+        //primary light source
+        Vector3f charPos = new Vector3f(characterModel.getWorldTranslation());
         charPos.addLocal(5f, 5f, 0);
-        PointLight lamp = new PointLight();
-        lamp.setColor(ColorRGBA.White);
-        lamp.setPosition(charPos);
-        lamp.setRadius(50f);
-        rootNode.addLight(lamp);
+        primaryLight = new PointLight();
+        primaryLight.setColor(ColorRGBA.White);
+        primaryLight.setPosition(charPos);
+        primaryLight.setRadius(50f);
+        rootNode.addLight(primaryLight);
         // make the light follow the player
         Vector3f lightPos = new Vector3f(7f, 7f, 2f);
-        LightControl lightCon = new LightControl(lamp);
+        LightControl lightCon = new LightControl(primaryLight);
         Node lampNode = new Node("lamp node");
         lampNode.setLocalTranslation(lightPos);
         characterNode.attachChild(lampNode);
         lampNode.addControl(lightCon);
+        //ceiling light
+        ceilingLamp = new PointLight();
+        ceilingLamp.setColor(YELLOW_LIGHT_COLOR);
+        ceilingLamp.setRadius(12f);
+        ceilingLamp.setPosition(new Vector3f(characterModel.getWorldTranslation()));
+        rootNode.addLight(ceilingLamp);
+        lightCon = new LightControl(ceilingLamp);
+        lampNode = new Node("ceiling lamp node");
+        lampNode.setLocalTranslation(-2f, 3f, 0);
+        lampNode.addControl(lightCon);
+        bedroom.attachChild(lampNode);
     }
 
     private void initMaterials() {
@@ -373,7 +390,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         if (isRunning) {
             if (isCameraTweening) {
                 Vector3f tweenTo = new Vector3f(0, 5, -5);
-                Vector3f translate = tweenTo.subtract(cameraNode.getLocalTranslation()).normalize().mult(tpf * 5);
+                Vector3f translate = tweenTo.subtract(cameraNode.getLocalTranslation());
+                float pctTweened = Math.max(translate.y / tweenTo.y - 0.15f, 0);
+                ceilingLamp.setColor(YELLOW_LIGHT_COLOR.mult(pctTweened));
+                translate.normalizeLocal().multLocal(tpf * 2f);
                 cameraNode.move(translate);
                 if (tweenTo.subtract(cameraNode.getLocalTranslation()).length() < 0.1f) {
                     cameraNode.setLocalTranslation(tweenTo);
@@ -444,6 +464,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                             if (!skyBox.brighter()) {
                                 reset();
                                 characterModel.wakeup();
+                            } else {
+                                //TODO adjust lighting?
+                                //primaryLight.setRadius(primaryLight.getRadius() + 10f);
                             }
                         }
                     }

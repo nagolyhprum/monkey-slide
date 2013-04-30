@@ -16,11 +16,11 @@ public class Bedroom extends Node {
         furniture.setLocalScale(0.25f);
         attachChild(furniture);
 
-        Material wallPaper = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
-        wallPaper.setTexture("ColorMap", Main.getInstance().getAssetManager().loadTexture("Textures/wall.png"));
+        Material wallPaper = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Light/Lighting.j3md");
+        wallPaper.setTexture("DiffuseMap", Main.getInstance().getAssetManager().loadTexture("Textures/wall.png"));
 
-        Material woodenFloor = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
-        woodenFloor.setTexture("ColorMap", Main.getInstance().getAssetManager().loadTexture("Textures/floor.png"));
+        Material woodenFloor = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Light/Lighting.j3md");
+        woodenFloor.setTexture("DiffuseMap", Main.getInstance().getAssetManager().loadTexture("Textures/floor.png"));
         //wall 1 - left
         leftWall = new Geometry("wall", new Box(0.01f, 0.5f, 1));
         leftWall.setMaterial(wallPaper);
