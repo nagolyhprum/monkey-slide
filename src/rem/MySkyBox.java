@@ -14,31 +14,34 @@ import com.jme3.util.BufferUtils;
 import com.jme3.util.SkyFactory;
 
 public class MySkyBox extends Node {
-
+    
     private Spatial brown, yellow, gray, blue, night;
     private Spatial[] brightness;
+    private Spatial brown_nm, yellow_nm, gray_nm, blue_nm;
+    private Spatial[] brightness_nm;
     private int index;
-
+    
     public MySkyBox() {
         setCullHint(Node.CullHint.Never);
+        night = SkyFactory.createSky(Main.getInstance().getAssetManager(), "Textures/skybox/StarrySky.dds", false);
         Texture[] texs;
-        //yellow = generateSkyBox("yellow");
         texs = LoadTextures("yellow");
         yellow = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        //brown = generateSkyBox("brown");
         texs = LoadTextures("brown");
         brown = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        //gray = generateSkyBox("gray");
         texs = LoadTextures("gray");
         gray = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        //blue = generateSkyBox("blue");
         texs = LoadTextures("blue");
         blue = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        night = SkyFactory.createSky(Main.getInstance().getAssetManager(), "Textures/skybox/StarrySky.dds", false);
         brightness = new Spatial[]{blue, gray, brown, yellow, night};
+        yellow_nm = generateSkyBox("yellow");
+        brown_nm = generateSkyBox("brown");
+        gray_nm = generateSkyBox("gray");
+        blue_nm = generateSkyBox("blue");
+        brightness_nm = new Spatial[]{blue_nm, gray_nm, brown_nm, yellow_nm, night};
         setLocalScale(50f);
     }
-
+    
     private Texture[] LoadTextures(String color) {
         Texture[] texs = new Texture[6];
         texs[1] = Main.getInstance().getAssetManager().loadTexture("Textures/skies/" + color + "cloud_lf.jpg");
@@ -49,7 +52,7 @@ public class MySkyBox extends Node {
         texs[5] = Main.getInstance().getAssetManager().loadTexture("Textures/skies/" + color + "cloud_dn.jpg");
         return texs;
     }
-
+    
     private Geometry generateSkyBox(String color) {
         Mesh mesh = new Mesh();
         Vector3f[] vertices = new Vector3f[24];
@@ -220,43 +223,65 @@ public class MySkyBox extends Node {
         indices[ii++] = 23;
         indices[ii++] = 22;
         indices[ii++] = 20;
-
+        
         mesh.setBuffer(VertexBuffer.Type.Position, 3, BufferUtils.createFloatBuffer(vertices));
         mesh.setBuffer(VertexBuffer.Type.TexCoord, 2, BufferUtils.createFloatBuffer(textureCoordinates));
         mesh.setBuffer(VertexBuffer.Type.Index, 3, BufferUtils.createIntBuffer(indices));
         mesh.setBuffer(VertexBuffer.Type.Normal, 3, BufferUtils.createFloatBuffer(normals));
         mesh.updateBound();
-
+        
         Geometry skybox = new Geometry("skybox", mesh);
-        Material mat = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Light/Lighting.j3md");
-        mat.setTexture("DiffuseMap", Main.getInstance().getAssetManager().loadTexture("Textures/skies/" + color + "cloud.jpg"));
+        Material mat = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
+        mat.setTexture("ColorMap", Main.getInstance().getAssetManager().loadTexture("Textures/skies/" + color + "cloud.jpg"));
         skybox.setMaterial(mat);
         skybox.setCullHint(Node.CullHint.Never);
         return skybox;
     }
-
+    
     public void reset() {
-        detachChild(brightness[index]);
-        index = brightness.length - 1;
-        attachChild(brightness[index]);
+        if (Main.getInstance().isMotionSicknessSafe()) {
+            detachChild(brightness_nm[index]);
+            index = brightness_nm.length - 1;
+            attachChild(brightness_nm[index]);            
+        } else {
+            detachChild(brightness[index]);
+            index = brightness.length - 1;
+            attachChild(brightness[index]);
+        }
     }
-
+    
     public boolean brighter() {
         if (index > 0) {
-            detachChild(brightness[index]);
-            index--;
-            attachChild(brightness[index]);
-            return true;
+            if (Main.getInstance().isMotionSicknessSafe()) {
+                detachChild(brightness_nm[index]);
+                index--;
+                attachChild(brightness_nm[index]);
+                return true;
+            } else {
+                detachChild(brightness[index]);
+                index--;
+                attachChild(brightness[index]);
+                return true;
+            }
         }
         return false;
     }
-
+    
     public boolean darker() {
-        if (index + 1 < brightness.length) {
-            detachChild(brightness[index]);
-            index++;
-            attachChild(brightness[index]);
-            return true;
+        if (Main.getInstance().isMotionSicknessSafe()) {
+            if (index + 1 < brightness_nm.length) {
+                detachChild(brightness_nm[index]);
+                index++;
+                attachChild(brightness_nm[index]);
+                return true;
+            }
+        } else {
+            if (index + 1 < brightness.length) {
+                detachChild(brightness[index]);
+                index++;
+                attachChild(brightness[index]);
+                return true;
+            }
         }
         return false;
     }

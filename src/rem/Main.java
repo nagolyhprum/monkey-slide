@@ -79,17 +79,19 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isDucking;
     private boolean isJumping;
     private boolean isRunning;
-    private boolean debugMode = false;
     private static final Main SINGLETON = new Main();
     private Material coinMat; //
     private Material rainbow; //
-    private Material  transparentMat;
+    private Material transparentMat;
     private boolean isCameraTweening;
     private MyCameraNode cameraNode;
     private MySkyBox skyBox;
     private boolean isHurt;
     private PointLight ceilingLamp;
     private PointLight primaryLight;
+    
+    private boolean debugMode = false;
+    private boolean motionSicknessSafeMode = false;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -133,6 +135,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         generateSlide(random, 6);
         putItHere(bedroom, slides.get(1), 0, 0);
         bedroom.assemble();
+        rootNode.attachChild(bedroom);
         ceilingLamp.setColor(YELLOW_LIGHT_COLOR);
         primaryLight.setRadius(50f);
         isJumping = isDucking = false;
@@ -398,6 +401,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 if (tweenTo.subtract(cameraNode.getLocalTranslation()).length() < 0.1f) {
                     cameraNode.setLocalTranslation(tweenTo);
                     isCameraTweening = false;
+                    rootNode.detachChild(bedroom);
                 }
             } else {
                 //set up the orientation of the player        
@@ -570,5 +574,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             isRunning = !isRunning;
             bedroom.explode();
         }
+    }
+
+    boolean isMotionSicknessSafe() {
+        return motionSicknessSafeMode;
     }
 }
