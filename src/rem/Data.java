@@ -31,9 +31,7 @@ public class Data {
     }
 
     public static void setHighscore(int highscore) {
-        if (getHighscore() < highscore) {
-            write("highscore.txt", "" + highscore);
-        }
+        write("highscore.txt", "" + highscore);
     }
 
     public static int getHighscore() {

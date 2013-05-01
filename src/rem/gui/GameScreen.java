@@ -1,6 +1,10 @@
 package rem.gui;
 
 import com.jme3.audio.AudioNode;
+import de.lessvoid.nifty.controls.Label;
+import de.lessvoid.nifty.controls.Scrollbar;
+import de.lessvoid.nifty.elements.Element;
+import de.lessvoid.nifty.elements.render.TextRenderer;
 import rem.Main;
 
 public class GameScreen extends SimpleScreen {
@@ -19,5 +23,28 @@ public class GameScreen extends SimpleScreen {
     @Override
     public void onEndScreen() {
         action.stop();
+    }
+
+    public void setCurrentCoins(int currentScore) {
+        Element e = nifty.getCurrentScreen().findElementByName("coins");
+        e.getRenderer(TextRenderer.class).setText("" + currentScore);
+    }
+    
+
+    public void setCurrentScore(int currentScore) {
+        Element e = nifty.getCurrentScreen().findElementByName("score");
+        e.getRenderer(TextRenderer.class).setText("" + currentScore);
+    }
+    
+
+    public void setHighScore(int currentScore) {
+        Element e = nifty.getCurrentScreen().findElementByName("highscore");
+        e.getRenderer(TextRenderer.class).setText("" + currentScore);
+    }
+    
+
+    public void setTotalCoins(int currentScore) {
+        Element e = nifty.getCurrentScreen().findElementByName("totalcoins");
+        e.getRenderer(TextRenderer.class).setText("" + currentScore);
     }
 }

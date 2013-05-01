@@ -22,6 +22,7 @@ import java.util.*;
 import rem.Obstacle.Dodge;
 import rem.Obstacle.Duck;
 import rem.Obstacle.Jump;
+import rem.gui.GameScreen;
 import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
@@ -92,13 +93,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private PointLight primaryLight;
     private boolean debugMode = false;
     private boolean motionSicknessSafeMode = false;
-    private int coinsCollected;
+    private int coinsCollected, highscore, totalCoins;
     private float pointsCollected;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(4);
-        as.setResolution(1024, 768);
+        as.setResolution(640, 480);
         as.setFrameRate(60);
         SINGLETON.setSettings(as);
         SINGLETON.setPauseOnLostFocus(true);
@@ -118,9 +119,23 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getVolume();
     }
 
+    public void updateAllStatistics() {
+        GameScreen gs = (GameScreen) nifty.getScreen("game").getScreenController();
+        gs.setCurrentScore((int) pointsCollected);
+        gs.setCurrentCoins((int) coinsCollected);
+        gs.setTotalCoins(coinsCollected + totalCoins);
+        if (pointsCollected > highscore) {
+            highscore = (int) pointsCollected;
+        }
+        gs.setHighScore(highscore);
+    }
+
     public void reset() {
         Data.addToTotalCoins(coinsCollected);
-        Data.setHighscore((int) pointsCollected);
+        totalCoins += coinsCollected;
+        if (pointsCollected > highscore) {
+            Data.setHighscore((int) pointsCollected);
+        }
         pointsCollected = 0;
         coinsCollected = 0;
         for (BezierCurve bc : slides) {
@@ -155,7 +170,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     @Override
     public void simpleInitApp() {
-
+        totalCoins = Data.getTotalCoins();
+        highscore = Data.getHighscore();
         initGUI();
         initSound();
         initObstacleAudio();
@@ -404,6 +420,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     @Override
     public void simpleUpdate(float tpf) {
         if (isRunning) {
+            if (tpf > 0) {
+                if (!isCameraTweening) {
+                    pointsCollected += 100 * tpf;
+                }
+                updateAllStatistics();
+            }
             if (isCameraTweening) {
                 Vector3f tweenTo = new Vector3f(0, 5, -5);
                 Vector3f translate = tweenTo.subtract(cameraNode.getLocalTranslation());
@@ -463,7 +485,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                         }
                     }
                 }
-                pointsCollected += 100 * tpf;
                 Spatial car = characterModel.getChild("bed");
                 for (int i = 0; i < coins.get(1).size(); i++) {
                     Spatial coin = coins.get(1).get(i).getChild("coin");
@@ -471,6 +492,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                         Coin c = (Coin) coins.get(1).get(i);
                         if (!c.isCollected()) {
                             coinsCollected++;
+                            pointsCollected += 100;
                             c.setCollected(true);
                         }
                     }
