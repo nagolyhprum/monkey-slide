@@ -18,9 +18,27 @@
     </screen>
     <screen id="game" controller="rem.gui.GameScreen">
         <layer id="background" childLayout="vertical">
-            <panel childLayout="horizontal">
-                <image width="32" height="32" filename="Interface/coin.png"></image>
-                <text id="score" font="Fonts/Arial-32.fnt" color="#ffffff" text="0" />
+            <panel childLayout="vertical">
+                <panel width="100%" height="25%" childLayout="horizontal">
+                    <panel width="50%" height="100%" childLayout="vertical">
+                        <image align="center" valign="center" width="32" height="32" filename="Interface/coin.png"></image>
+                        <text align="center" valign="center" id="coins" font="Fonts/Arial-32.fnt" color="#ffffff" text="0" />
+                    </panel>
+                    <panel width="50%" height="100%" childLayout="vertical">
+                        <text align="center" valign="center" id="score" font="Fonts/Arial-32.fnt" color="#ffffff" text="0"/>
+                    </panel>
+                </panel>
+                <panel width="100%" height="50%" childLayout="horizontal">                    
+                </panel>
+                <panel width="100%" height="25%" childLayout="horizontal">                    
+                    <panel width="50%" height="100%" childLayout="vertical">
+                        <image align="center" valign="center" width="32" height="32" filename="Interface/coin.png"></image>
+                        <text align="center" valign="center" id="totalcoins" font="Fonts/Arial-32.fnt" color="#ffffff" text="0"/>
+                    </panel>                    
+                    <panel width="50%" height="100%" childLayout="vertical">
+                        <text align="center" valign="bottom" id="highscore" font="Fonts/Arial-32.fnt" color="#ffffff" text="0"/>
+                    </panel>
+                </panel>
             </panel>
         </layer>
     </screen>
