@@ -569,7 +569,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 currentTurnSpeed = Math.min(START_TURN_SPEED + 0.15f * (timeRunning / 25), MAX_TURN_SPEED);
             }
         } else if (!debugMode && !bedroom.isExploding()) {
-            cameraNode.setLocalTranslation(-1, 1, -1);
+            cameraNode.setLocalTranslation(-1.4f, 1, -1.5f);
             cameraNode.setLookOffset(new Vector3f(0, 0, 0));
         }
         flyCam.setEnabled(debugMode);

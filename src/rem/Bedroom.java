@@ -23,11 +23,11 @@ public class Bedroom extends Node {
         Material woodenFloor = new Material(Main.getInstance().getAssetManager(), "Common/MatDefs/Light/Lighting.j3md");
         woodenFloor.setTexture("DiffuseMap", Main.getInstance().getAssetManager().loadTexture("Textures/floor.png"));
         //wall 1 - left
-        leftWall = new Geometry("wall", new Box(0.01f, 0.5f, 1));
+        leftWall = new Geometry("wall", new Box(0.01f, 0.5f, 1.5f));
         leftWall.setMaterial(wallPaper);
         attachChild(leftWall);
         //wall 2 - right
-        rightWall = new Geometry("wall", new Box(0.01f, 0.5f, 1));
+        rightWall = new Geometry("wall", new Box(0.01f, 0.5f, 1.5f));
         rightWall.setMaterial(wallPaper);
         attachChild(rightWall);
         //wall 3 - back
@@ -35,7 +35,7 @@ public class Bedroom extends Node {
         backWall.setMaterial(wallPaper);
         attachChild(backWall);
         //floor
-        floor = new Geometry("floor", new Box(1.15f, 0.01f, 1));
+        floor = new Geometry("floor", new Box(1.15f, 0.01f, 1.5f));
         floor.setMaterial(woodenFloor);
         attachChild(floor);
         assemble();
