@@ -191,6 +191,37 @@ public abstract class Obstacle extends Node {
         }
     }
 
+    public static class DangerDodge extends Obstacle {
+
+        private Material mat1, mat2;
+        private boolean rng = Main.getInstance().random.nextFloat() < .5f;
+
+        public DangerDodge() {
+            int birds = 4;
+            for (int i = 0; i < birds; i++) {
+                Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/ghost/ghost.j3o");
+                geo.rotate(0, FastMath.HALF_PI, 0);
+                geo.setLocalTranslation(0, BezierCurve.RADIUS + 0f, 0);
+                geo.scale(2f);
+                Node node = new Node();
+                node.attachChild(geo);
+                node.rotate(0, 0, FastMath.TWO_PI * i / birds);
+                attachChild(node);
+            }
+        }
+
+        @Override
+        void update(float tpf) {
+            Quaternion roll = new Quaternion();
+            roll.fromAngles(0, 0, (rng ? -1 : 1) * FastMath.HALF_PI * tpf);
+            this.rotate(roll);
+        }
+
+        public String audioName() {
+            return "ghost";
+        }
+    }
+
     public static class Dodge extends Obstacle {
 
         public Dodge() {

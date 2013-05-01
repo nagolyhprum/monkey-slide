@@ -19,6 +19,7 @@ import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture;
 import de.lessvoid.nifty.Nifty;
 import java.util.*;
+import rem.Obstacle.DangerDodge;
 import rem.Obstacle.DangerDuck;
 import rem.Obstacle.Dodge;
 import rem.Obstacle.DoubleDodge;
@@ -393,9 +394,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez;
                 if (currentSpeed - START_FORWARD_SPEED < (MAX_FORWARD_SPEED - START_FORWARD_SPEED) / 2) {
-                    clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DangerDuck.class, DoubleDodge.class, Jump.class};
+                    clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DangerDuck.class, DoubleDodge.class, Jump.class, DangerDodge.class};
                 } else {
-                    clazzez = new Class[]{DangerDuck.class, DoubleDodge.class, Jump.class};
+                    clazzez = new Class[]{DangerDuck.class, DoubleDodge.class, Jump.class, DangerDodge.class};
                 }
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
                 try {
