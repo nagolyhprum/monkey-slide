@@ -7,23 +7,27 @@ import com.jme3.math.Quaternion;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class Obstacle extends Node {
-    
+
     public static final int NUM_BIRDS = 10;
-    
+    public static final int NUM_SKULLS = 12;
+    public static final float DANGER_DUCK_DIP_DRIVE = 2f;
+
     private Obstacle() {
         setName("obstacle");
     }
-    
+
     abstract void update(float tpf);
-    
+
     abstract String audioName();
-    
+
     public static class Jump extends Obstacle {
-        
+
         public Jump() {
-            
+
             Spatial a = Main.getInstance().getAssetManager().loadModel("Models/grave/grave2.j3o");
             a.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
             a.setLocalScale(0.8f);
@@ -66,20 +70,20 @@ public abstract class Obstacle extends Node {
             n.attachChild(d);
             attachChild(n);
         }
-        
+
         @Override
         void update(float tpf) {
         }
-        
+
         public String audioName() {
             return "grunt";
         }
     }
-    
+
     public static class Duck extends Obstacle {
-        
+
         private Material mat1, mat2;
-        
+
         public Duck() {
             float hue1 = Main.getInstance().random.nextFloat();
             float hue2 = hue1 + 0.5f;
@@ -115,21 +119,80 @@ public abstract class Obstacle extends Node {
                 attachChild(node);
             }
         }
-        
+
         @Override
         void update(float tpf) {
             Quaternion roll = new Quaternion();
             roll.fromAngles(0, 0, FastMath.HALF_PI * tpf);
             this.rotate(roll);
         }
-        
+
         public String audioName() {
             return "birds";
         }
     }
-    
+
+    public static class DangerDuck extends Obstacle {
+
+        private List<Spatial> birdList;
+        private int leadingBird;
+        private boolean[] movingUp;
+        private float maxHeight;
+
+        public DangerDuck() {
+            leadingBird = 0;
+            maxHeight = BezierCurve.RADIUS + 1.3f;
+            birdList = new ArrayList<Spatial>();
+            movingUp = new boolean[NUM_SKULLS];
+            for (int i = 0; i < NUM_SKULLS; i++) {
+                Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/skull/skull_monster.j3o");
+                geo.rotate(0, FastMath.PI, 0);
+                geo.setLocalTranslation(0, maxHeight, 0);
+                geo.scale(0.1f);
+                Node node = new Node();
+                node.attachChild(geo);
+                node.rotate(0, 0, FastMath.TWO_PI * i / NUM_SKULLS);
+                attachChild(node);
+                birdList.add(geo);
+                movingUp[i] = true;
+            }
+            movingUp[leadingBird] = false;
+        }
+
+        @Override
+        void update(float tpf) {
+            float lead_y = birdList.get(leadingBird).getLocalTranslation().getY();
+            if (lead_y <= 0.66f * maxHeight) {
+                leadingBird = (leadingBird + 1) % NUM_SKULLS;
+                movingUp[leadingBird] = false;
+            }
+            for (int i = 0; i < birdList.size(); i++) {
+                float bird_y = birdList.get(i).getLocalTranslation().getY();
+                if (movingUp[i]) {
+                    if (bird_y < maxHeight) {
+                        System.out.println("bird " + i + " moving up");
+                        //move up
+                        birdList.get(i).setLocalTranslation(0, bird_y + DANGER_DUCK_DIP_DRIVE * tpf, 0);
+                    }
+                } else {
+                    if (bird_y <= BezierCurve.RADIUS + 0.1f) {
+                        movingUp[i] = true;
+                    } else {
+                        System.out.println("bird " + i + "moving down");
+                        //move down
+                        birdList.get(i).setLocalTranslation(0, bird_y + -DANGER_DUCK_DIP_DRIVE * tpf, 0);
+                    }
+                }
+            }
+        }
+
+        public String audioName() {
+            return "ghost";
+        }
+    }
+
     public static class Dodge extends Obstacle {
-        
+
         public Dodge() {
             Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
             geo.scale(0.2f);
@@ -137,11 +200,35 @@ public abstract class Obstacle extends Node {
             geo.rotate(0, FastMath.HALF_PI, 0);
             attachChild(geo);
         }
-        
+
         @Override
         void update(float tpf) {
         }
-        
+
+        public String audioName() {
+            return "water";
+        }
+    }
+
+    public static class DoubleDodge extends Obstacle {
+
+        public DoubleDodge() {
+            Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
+            geo.scale(0.2f);
+            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            geo.rotate(0, FastMath.HALF_PI, 0);
+            attachChild(geo);
+            geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
+            geo.scale(0.2f);
+            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            geo.rotate(0, FastMath.PI * 1.5f, 0);
+            attachChild(geo);
+        }
+
+        @Override
+        void update(float tpf) {
+        }
+
         public String audioName() {
             return "water";
         }

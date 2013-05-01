@@ -19,7 +19,9 @@ import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture;
 import de.lessvoid.nifty.Nifty;
 import java.util.*;
+import rem.Obstacle.DangerDuck;
 import rem.Obstacle.Dodge;
+import rem.Obstacle.DoubleDodge;
 import rem.Obstacle.Duck;
 import rem.Obstacle.Jump;
 import rem.gui.SettingsScreen;
@@ -219,6 +221,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         obstacleAudio.put("grunt", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
         obstacleAudio.put("water", new AudioNode(assetManager, "Sound/obstacle/watersplash.wav"));
         obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/chrip.wav"));
+        obstacleAudio.put("ghost", new AudioNode(assetManager, "Sound/obstacle/qubodup-GhostMoan01mod.wav"));
     }
 
     private void initActionAudio() {
@@ -339,10 +342,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             ArrayList<Node> cs = new ArrayList<Node>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
-                Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class};
+                Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DoubleDodge.class, DangerDuck.class};
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
                 try {
-                    if (clazz.equals(Dodge.class)) {
+                    if (clazz.equals(Dodge.class) || clazz.equals(DoubleDodge.class)) {
                         //add coins to certain locations
                         for (float j = 0.10f; j <= 0.85; j += 0.15) {
                             //create and place the obstacle
