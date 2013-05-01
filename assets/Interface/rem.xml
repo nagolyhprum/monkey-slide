@@ -47,24 +47,24 @@
     <screen id="settings" controller="rem.gui.SettingsScreen">
         <layer childLayout="vertical">
             <panel height="22%"/>
-            <panel height="16%" width="80%" align="center" childLayout="center" backgroundColor="#00f8">
+            <panel height="16%" width="80%" align="center" childLayout="center" backgroundColor="#33d8">
                 <text font="Fonts/Arial-32.fnt" color="#ffff" text="Settings" align="center" valign="center" />
             </panel>
-            <panel height="25%" width="80%" align="center" childLayout="horizontal">
-                <panel width="10%" backgroundColor="#00f8"/>
-                <panel width="80%" align="center" childLayout="vertical" backgroundColor="#00f8">
+            <panel height="25%" width="80%" align="center" childLayout="horizontal" backgroundColor="#33d8">
+                <panel width="10%"/>
+                <panel width="80%" align="center" childLayout="vertical">
                     <text font="aurulent-sans-16.fnt" color="#ffff" text="Volume" />
                     <control id="volume" name="horizontalScrollbar" worldMax="100.0" worldPageSize="10.0" initial="${CALL.getVolume()}" buttonStepSize="1.0" pageStepSize="10.0" />
                 </panel>
-                <panel width="10%" backgroundColor="#00f8"/>
+                <panel width="10%"/>
             </panel>
-            <panel height="15%" width="80%" align="center" childLayout="horizontal" backgroundColor="#00f8">
-                <panel height="50%" width="50%" valign="center" childLayout="center" backgroundColor="#00f8">
+            <panel height="15%" width="80%" align="center" childLayout="horizontal" backgroundColor="#33d8">
+                <panel height="50%" width="50%" valign="center" childLayout="center">
                     <control align="center" name="button" label="Confirm">
                         <interact onClick="confirm()"/>
                     </control>
                 </panel>
-                <panel height="50%" width="50%" valign="center" childLayout="center" backgroundColor="#00f8">
+                <panel height="50%" width="50%" valign="center" childLayout="center">
                     <control align="center" name="button" label="Cancel">
                         <interact onClick="cancel()"/>
                     </control>
