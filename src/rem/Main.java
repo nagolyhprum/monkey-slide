@@ -371,17 +371,36 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             ArrayList<Coin> cs = new ArrayList<Coin>();
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
-                Class[] clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DoubleDodge.class, DangerDuck.class};
+                Class[] clazzez;
+                if (currentSpeed < (MAX_FORWARD_SPEED - START_FORWARD_SPEED) / 2) {
+                    clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DangerDuck.class};
+                } else {
+                    clazzez = new Class[]{DoubleDodge.class, Jump.class, DangerDuck.class};
+                }
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
                 try {
-                    if (clazz.equals(Dodge.class) || clazz.equals(DoubleDodge.class)) {
-                        //add coins to certain locations
+                    if (clazz.equals(Dodge.class)) {
                         for (float j = 0.10f; j <= 0.85; j += 0.15) {
                             //create and place the obstacle
                             Obstacle node = (Obstacle) clazz.getConstructor().newInstance();
                             putItHere(node, bc, j, FastMath.rand.nextFloat() * FastMath.TWO_PI);
                             bc.attachChild(node);
                             os.add(node);
+                        }
+                    } else if (clazz.equals(DoubleDodge.class)) {
+                        boolean odd = true;
+                        for (float j = 0.10f; j <= 0.85; j += 0.15) {
+                            //create and place the obstacle
+                            Obstacle node;
+                            if (odd) {
+                                node = (Obstacle) clazz.getConstructor().newInstance();
+                            } else {
+                                node = (Obstacle) Dodge.class.getConstructor().newInstance();
+                            }
+                            putItHere(node, bc, j, FastMath.rand.nextFloat() * FastMath.TWO_PI);
+                            bc.attachChild(node);
+                            os.add(node);
+                            odd = !odd;
                         }
                     } else {
                         //create and place the obstacle

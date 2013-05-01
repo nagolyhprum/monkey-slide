@@ -220,8 +220,8 @@ public abstract class Obstacle extends Node {
             attachChild(geo);
             geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
             geo.scale(0.2f);
-            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
-            geo.rotate(0, FastMath.PI * 1.5f, 0);
+            geo.setLocalTranslation(0, -BezierCurve.RADIUS + 0.1f, 0);
+            geo.rotate(FastMath.PI, FastMath.PI * 1.5f, 0);
             attachChild(geo);
         }
 
