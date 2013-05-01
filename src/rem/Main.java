@@ -108,7 +108,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
-        as.setSamples(4);
+        as.setSamples(0);
         as.setResolution(640, 480);
         as.setFrameRate(60);
         SINGLETON.setSettings(as);
@@ -165,7 +165,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastEnd = Vector3f.ZERO;
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
-        generateSlide(random, 4);
+        generateSlide(random, 5);
         putItHere(bedroom, slides.get(1), 0, 0);
         bedroom.assemble();
         rootNode.attachChild(bedroom);
