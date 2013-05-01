@@ -101,7 +101,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(4);
-        as.setResolution(640, 480);
+        as.setResolution(1280, 720);
         as.setFrameRate(60);
         SINGLETON.setSettings(as);
         SINGLETON.setPauseOnLostFocus(true);
@@ -430,7 +430,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 updateAllStatistics();
             }
             if (isCameraTweening) {
-                Vector3f tweenTo = new Vector3f(0, 5, -5);
+                Vector3f tweenTo = new Vector3f(0, 2.0f, -5);
                 Vector3f translate = tweenTo.subtract(cameraNode.getLocalTranslation());
                 float pctTweened = Math.max(translate.y / tweenTo.y - 0.15f, 0);
                 ceilingLamp.setColor(YELLOW_LIGHT_COLOR.mult(pctTweened));
