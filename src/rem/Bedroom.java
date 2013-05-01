@@ -7,6 +7,7 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 
 public class Bedroom extends Node {
+    public static final int EXPLODE_SPEED = 6;
 
     private Spatial leftWall, backWall, rightWall, furniture, floor;
     private boolean isExploding;
@@ -55,12 +56,11 @@ public class Bedroom extends Node {
 
     public void update(float tpf) {
         if (isExploding) {
-            int speed = 10;
-            furniture.move(0, -tpf * speed, 0);
-            floor.move(0, -tpf * speed, 0);
-            leftWall.move(tpf * speed, 0, 0);
-            rightWall.move(-tpf * speed, 0, 0);
-            backWall.move(0, 0, tpf * speed);
+            furniture.move(0, -tpf * EXPLODE_SPEED, 0);
+            floor.move(0, -tpf * EXPLODE_SPEED, 0);
+            leftWall.move(tpf * EXPLODE_SPEED, 0, 0);
+            rightWall.move(-tpf * EXPLODE_SPEED, 0, 0);
+            backWall.move(0, 0, tpf * EXPLODE_SPEED);
         }
     }
 
