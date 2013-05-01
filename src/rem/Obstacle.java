@@ -194,9 +194,9 @@ public abstract class Obstacle extends Node {
     public static class Dodge extends Obstacle {
 
         public Dodge() {
-            Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
-            geo.scale(0.2f);
-            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/WellMoogan/WellMoogan.j3o");
+            geo.scale(1f);
+            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.02f, 0);
             geo.rotate(0, FastMath.HALF_PI, 0);
             attachChild(geo);
         }
@@ -213,14 +213,14 @@ public abstract class Obstacle extends Node {
     public static class DoubleDodge extends Obstacle {
 
         public DoubleDodge() {
-            Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
-            geo.scale(0.2f);
-            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.1f, 0);
+            Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/WellMoogan/WellMoogan.j3o");
+            geo.scale(1f);
+            geo.setLocalTranslation(0, BezierCurve.RADIUS - 0.02f, 0);
             geo.rotate(0, FastMath.HALF_PI, 0);
             attachChild(geo);
-            geo = Main.getInstance().getAssetManager().loadModel("Models/Well/Well.j3o");
-            geo.scale(0.2f);
-            geo.setLocalTranslation(0, -BezierCurve.RADIUS + 0.1f, 0);
+            geo = Main.getInstance().getAssetManager().loadModel("Models/WellMoogan/WellMoogan.j3o");
+            geo.scale(1f);
+            geo.setLocalTranslation(0, -BezierCurve.RADIUS + 0.02f, 0);
             geo.rotate(FastMath.PI, FastMath.PI * 1.5f, 0);
             attachChild(geo);
         }
