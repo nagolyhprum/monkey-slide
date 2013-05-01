@@ -164,7 +164,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lastEnd = Vector3f.ZERO;
         lastDirection = BezierCurve.generateDirection(random, new Vector3f(0, 0, 5));
         //generate the slides
-        generateSlide(random, 6);
+        generateSlide(random, 4);
         putItHere(bedroom, slides.get(1), 0, 0);
         bedroom.assemble();
         rootNode.attachChild(bedroom);
@@ -364,7 +364,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     }
 
     private void initSkybox() {
-        characterNode.attachChild(skyBox = new MySkyBox());
+        skyBox = new MySkyBox();
+        characterNode.attachChild(skyBox);
     }
 
     /**

@@ -21,7 +21,7 @@ public class Coin extends Node {
     private boolean collected;
 
     public Coin(Material mat) {
-        Geometry coin = new Geometry("coin", new Cylinder(32, 32, 0.5f, 0.05f, true));
+        Geometry coin = new Geometry("coin", new Cylinder(16, 16, 0.5f, 0.05f, true));
         coin.setLocalTranslation(0, BezierCurve.RADIUS + 1f, 0);
         coin.setMaterial(mat);
         attachChild(coin);

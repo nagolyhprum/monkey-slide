@@ -1,11 +1,7 @@
 package rem;
 
-import com.jme3.material.MatParam;
 import com.jme3.material.Material;
-import com.jme3.material.RenderState.BlendMode;
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
-import com.jme3.math.Matrix3f;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
@@ -13,8 +9,6 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.VertexBuffer.Type;
-import com.jme3.scene.shape.Cylinder;
-import com.jme3.scene.shape.Sphere;
 import com.jme3.util.BufferUtils;
 import java.util.Random;
 
@@ -24,6 +18,8 @@ public class BezierCurve extends Node {
     private static final float ADD_WEIGHT = 0.01f;
     //the radius of the spline to generate
     public static final float RADIUS = 1;
+    public static final int SAMPLES = 10;
+    public static final float STEPS = 0.1f;
     //instance of spline points
     private Vector3f start, controlA, controlB, end;
     private Material mat;
@@ -48,8 +44,8 @@ public class BezierCurve extends Node {
 
     private void addMeshSpline() {
         //init
-        float step = 0.05f;
-        int samples = 12;
+        float step = STEPS;
+        int samples = SAMPLES;
         int vi = 0, tci = 0, ii = 0, ni = 0;
         Vector3f[] vertices = new Vector3f[(int) ((samples + 1) * (1 / step + 1))];
         Vector2f[] textureCoordinates = new Vector2f[vertices.length];
