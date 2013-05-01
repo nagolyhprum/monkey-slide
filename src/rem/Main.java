@@ -18,7 +18,9 @@ import com.jme3.scene.control.LightControl;
 import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture;
 import de.lessvoid.nifty.Nifty;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Random;
 import rem.Obstacle.DangerDodge;
 import rem.Obstacle.DangerDuck;
 import rem.Obstacle.Dodge;
@@ -109,7 +111,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(0);
-        as.setResolution(640, 480);
+        as.setResolution(1280, 720);
         as.setFrameRate(60);
         SINGLETON.setSettings(as);
         SINGLETON.setPauseOnLostFocus(true);
