@@ -9,7 +9,7 @@
                 <control align="center" name="button" label="Play">
                     <interact onClick="play()"/>
                 </control>
-                <panel height="5%" width="100%" />
+                <panel height="5%" width="100%"></panel>
                 <control align="center" name="button" label="Settings">
                     <interact onClick="settings()"/>
                 </control>

@@ -26,9 +26,10 @@ import rem.Obstacle.Duck;
 import rem.Obstacle.Jump;
 import rem.gui.GameScreen;
 import rem.gui.SettingsScreen;
+import rem.gui.StartScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
-
+    
     private boolean debugMode = false;
     //the color for the ceiling light in the bedroom
     public static final ColorRGBA YELLOW_LIGHT_COLOR = new ColorRGBA(1.0f, 1.0f, 0.8f, 1.0f);
@@ -103,7 +104,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private float currentSpeed;
     private float currentTurnSpeed;
     private long startTime;
-
+    
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(4);
@@ -115,18 +116,18 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         SINGLETON.setShowSettings(false);
         SINGLETON.start();
     }
-
+    
     private Main() {
     }
-
+    
     public static Main getInstance() {
         return SINGLETON;
     }
-
+    
     public float getVolume() {
-        return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getVolume();
+        return ((SettingsScreen) nifty.getScreen("settings").getScreenController()).getVolume()/100f;
     }
-
+    
     public void updateAllStatistics() {
         GameScreen gs = (GameScreen) nifty.getScreen("game").getScreenController();
         gs.setCurrentScore((int) pointsCollected);
@@ -137,7 +138,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         }
         gs.setHighScore(highscore);
     }
-
+    
     public void reset() {
         Data.addToTotalCoins(coinsCollected);
         totalCoins += coinsCollected;
@@ -173,11 +174,27 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         isRunning = true;
         simpleUpdate(0);
         isRunning = false;
-
+        
         nifty.gotoScreen("start");
-
+        
     }
-
+    
+    public void setEffectsVolume(float vol) {
+        for(AudioNode a:coinAudio) {
+            a.setVolume(vol);
+        }
+        for(String s: obstacleAudio.keySet()) {
+            obstacleAudio.get(s).setVolume(vol);
+        }
+        jump.setVolume(vol);
+        duck.setVolume(vol);
+    }
+    
+    public void setBackgroundVolume(float vol) {
+        ((GameScreen)(nifty.getScreen("game").getScreenController())).setVolume(vol);
+        ((StartScreen)(nifty.getScreen("start").getScreenController())).setVolume(vol);
+    }
+    
     @Override
     public void simpleInitApp() {
         totalCoins = Data.getTotalCoins();
@@ -190,7 +207,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         // disable the fly cam
         flyCam.setEnabled(false);
         inputManager.setCursorVisible(true);
-
+        
         bedroom = new Bedroom();
         rootNode.attachChild(bedroom);
 
@@ -222,7 +239,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         im.addListener(this, "duck", "jump", "reset", "debug");
         reset();
     }
-
+    
     public void initGUI() {
         NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
         nifty = niftyDisplay.getNifty();
@@ -231,55 +248,56 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         // attach the nifty display to the gui view port as a processor
         guiViewPort.addProcessor(niftyDisplay);
     }
-
+    
     public void initSound() {
         for (int i = 1; i <= 10; i++) {
             coinAudio[i - 1] = new AudioNode(assetManager, String.format("Sound/coin/coin%s.wav", i), false);
+            coinAudio[i - 1].setVolume(getVolume());
         }
     }
-
+    
     public void playCoin() {
         playCoin((int) (Math.random() * coinAudio.length));
     }
-
+    
     public void playCoin(int num) {
         coinAudio[num].playInstance();
     }
-
+    
     private void initObstacleAudio() {
         obstacleAudio.put("grunt", new AudioNode(assetManager, "Sound/obstacle/grunt.wav"));
         obstacleAudio.put("water", new AudioNode(assetManager, "Sound/obstacle/watersplash.wav"));
         obstacleAudio.put("birds", new AudioNode(assetManager, "Sound/obstacle/chrip.wav"));
         obstacleAudio.put("ghost", new AudioNode(assetManager, "Sound/obstacle/qubodup-GhostMoan01mod.wav"));
     }
-
+    
     private void initActionAudio() {
         jump = new AudioNode(assetManager, "Sound/action/jump.ogg");
         duck = new AudioNode(assetManager, "Sound/action/duck.wav");
     }
-
+    
     private void initCamera() {
         //set up the camera
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(10);
         flyCam.setEnabled(!debugMode);
-
+        
         cameraNode = new MyCameraNode(cam, characterModel, characterModel);
     }
-
+    
     private void initCharacter() {
         //create the character
         path = new Node();
         characterModel = new Bed(redMat);
         characterNode = new Node();
-
-
+        
+        
         characterModel.scale(SCALE);
         characterNode.attachChild(characterModel);
         path.attachChild(characterNode);
         rootNode.attachChild(path);
     }
-
+    
     private void initLightAndShadow() {
         //add ambient light
         AmbientLight ambient = new AmbientLight();
@@ -312,7 +330,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         lampNode.addControl(lightCon);
         bedroom.attachChild(lampNode);
     }
-
+    
     private void initMaterials() {
         coinMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         coinMat.setColor("Ambient", ColorRGBA.Brown);
@@ -320,14 +338,14 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         coinMat.setColor("Specular", ColorRGBA.White);
         coinMat.setFloat("Shininess", 96f);
         coinMat.setBoolean("UseMaterialColors", true);
-
+        
         rainbow = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         Texture texture = assetManager.loadTexture("Textures/rainbow.jpg");
         rainbow.setTexture("DiffuseMap", texture);
         rainbow.setFloat("Shininess", 32);
         rainbow.setColor("Specular", ColorRGBA.White);
         rainbow.setColor("Diffuse", ColorRGBA.White);
-
+        
         transparentMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         ColorRGBA transparency = new ColorRGBA(1.0f, 1.0f, 1.0f, 0.1f);
         transparentMat.setColor("Diffuse", transparency);
@@ -335,7 +353,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         transparentMat.setBoolean("UseAlpha", true);
         transparentMat.setBoolean("UseMaterialColors", true);
         transparentMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
-
+        
         redMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         redMat.setColor("Diffuse", ColorRGBA.Red);
         redMat.setColor("Ambient", ColorRGBA.Red.mult(0.2f));
@@ -343,7 +361,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rainbow.setFloat("Shininess", 64);
         redMat.setBoolean("UseMaterialColors", true);
     }
-
+    
     private void initSkybox() {
         characterNode.attachChild(skyBox = new MySkyBox());
     }
@@ -418,7 +436,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             this.obstacles.add(os);
             this.coins.add(cs);
             experienced++;
-
+            
             bc.setQueueBucket(RenderQueue.Bucket.Transparent);
             rootNode.attachChild(bc);
         }
@@ -446,7 +464,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             putItHere(c, bc, i, start + progress * i);
         }
     }
-
+    
     @Override
     public void simpleUpdate(float tpf) {
         if (isRunning) {
@@ -508,7 +526,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     slides.remove(0);
                     coins.remove(0);
                     obstacles.remove(0);
-
+                    
                     slides.get(0).setMat(transparentMat);
                     for (Node n : obstacles.get(0)) {
                         for (Spatial s : n.getChildren()) {
@@ -578,7 +596,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             cameraNode.update();
         }
     }
-
+    
     private void hitObstacle(String audioName) {
         obstacleAudio.get(audioName).playInstance();
     }
@@ -598,7 +616,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         it.setLocalRotation(rot);
         it.setLocalTranslation(l);
     }
-
+    
     public static Quaternion getRotation(BezierCurve spline, float weight, float rotation) {
         Vector3f d = spline.getDirection(weight);
         //determine the rotation along x and y
@@ -612,7 +630,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         rot = rot.mult(new Quaternion().fromAngleAxis(yrot, Vector3f.UNIT_Y));
         return rot;
     }
-
+    
     public void onAnalog(String name, float value, float tpf) {
         if ("clockwise".equals(name)) {
             rotation += currentTurnSpeed * tpf;
@@ -620,7 +638,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             rotation -= currentTurnSpeed * tpf;
         }
     }
-
+    
     public void onAction(String name, boolean keyPressed, float tpf) {
         if (keyPressed) {
             if ("duck".equals(name) && !isDucking && !isJumping) {
@@ -638,7 +656,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             }
         }
     }
-
+    
     public void go() {
         if (!isCameraTweening) {
             if (!bedroom.isExploding()) {
@@ -649,7 +667,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             bedroom.explode();
         }
     }
-
+    
     boolean isMotionSicknessSafe() {
         return motionSicknessSafeMode;
     }

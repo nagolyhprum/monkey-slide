@@ -11,7 +11,7 @@ public class StartScreen extends SimpleScreen {
     public void onStartScreen() {
         Main game = Main.getInstance();
         sleep = new AudioNode(game.getAssetManager(), "Sound/background/storybook.wav", false);
-        sleep.setVolume(0.33f);
+        sleep.setVolume(0.33f * Main.getInstance().getVolume());
         sleep.setLooping(true);
         sleep.play();
     }
@@ -28,5 +28,9 @@ public class StartScreen extends SimpleScreen {
 
     public void settings() {
         nifty.gotoScreen("settings");
+    }
+
+    public void setVolume(float vol) {
+        sleep.setVolume(vol);
     }
 }

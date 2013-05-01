@@ -1,11 +1,11 @@
 package rem.gui;
 
 import de.lessvoid.nifty.controls.Scrollbar;
+import rem.Main;
 
 public class SettingsScreen extends SimpleScreen {
 
     private float volume = 100;
-    private float prevVolume;
 
     public float getVolume() {
         return volume;
@@ -13,7 +13,6 @@ public class SettingsScreen extends SimpleScreen {
 
     @Override
     public void onStartScreen() {
-        prevVolume = volume;
     }
 
     @Override
@@ -24,15 +23,15 @@ public class SettingsScreen extends SimpleScreen {
         Scrollbar volumeControl = (Scrollbar) nifty.getCurrentScreen().findElementByName("volume").getAttachedInputControl().getController();
 
         volume = volumeControl.getValue();
-
+        System.out.println("volume = " + volume / 100f);
+        Main.getInstance().setEffectsVolume(volume / 100f);
+        Main.getInstance().setBackgroundVolume(volume / 100f);
         nifty.gotoScreen("start");
     }
 
     public void cancel() {
-        volume = prevVolume;
-        
         Scrollbar volumeControl = (Scrollbar) nifty.getCurrentScreen().findElementByName("volume").getAttachedInputControl().getController();
-        
+
         volumeControl.setValue(volume);
         nifty.gotoScreen("start");
     }
