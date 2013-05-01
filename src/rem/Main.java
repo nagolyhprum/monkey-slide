@@ -29,13 +29,19 @@ import rem.gui.SettingsScreen;
 
 public class Main extends SimpleApplication implements AnalogListener, ActionListener {
 
+    private boolean debugMode = false;
+    //the color for the ceiling light in the bedroom
     public static final ColorRGBA YELLOW_LIGHT_COLOR = new ColorRGBA(1.0f, 1.0f, 0.8f, 1.0f);
     //the y coordinate when the character is standing
     public static final float STANDING_Y = 2;
     //the scale when the character is standing
     public static final float SCALE = 0.33f;
     //the forward movement speed of the character
-    public static final float FORWARD_SPEED = 0.33f;
+    public static final float START_FORWARD_SPEED = 0.33f;
+    public static final float MAX_FORWARD_SPEED = 0.66f;
+    //how fast the character rotates
+    public static final float START_TURN_SPEED = FastMath.TWO_PI / 3.2f;
+    public static final float MAX_TURN_SPEED = FastMath.TWO_PI / 1.6f;
     //the fall acceleration of the character
     public static final float GRAVITY = 9.8f;
     //initial velocity of a jump
@@ -53,8 +59,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private float hover;
     //the number of splines in existance
     public int experienced;
-    //how fast the character rotates
-    public static final float TURN_SPEED = FastMath.TWO_PI / 3.2f;
     //these are all of the slides in memory
     private ArrayList<BezierCurve> slides;
     //these are the coins in memory
@@ -93,10 +97,12 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private boolean isHurt;
     private PointLight ceilingLamp;
     private PointLight primaryLight;
-    private boolean debugMode = false;
     private boolean motionSicknessSafeMode = false;
     private int coinsCollected, highscore, totalCoins;
     private float pointsCollected;
+    private float currentSpeed;
+    private float currentTurnSpeed;
+    private long startTime;
 
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
@@ -140,6 +146,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         }
         pointsCollected = 0;
         coinsCollected = 0;
+        currentSpeed = START_FORWARD_SPEED;
+        currentTurnSpeed = START_TURN_SPEED;
         for (BezierCurve bc : slides) {
             rootNode.detachChild(bc);
         }
@@ -406,7 +414,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
      */
     public void addCoins(BezierCurve bc, Material mat, ArrayList<Coin> coins) {
         //which rotation do we start
-        float start = TURN_SPEED * FastMath.rand.nextFloat();
+        float start = START_TURN_SPEED * FastMath.rand.nextFloat();
         //how fast does the rotation go?
         float progress = FastMath.TWO_PI * (FastMath.rand.nextFloat() - 0.5f) * 2;
         //add coins to certain locations
@@ -440,6 +448,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     cameraNode.setLocalTranslation(tweenTo);
                     isCameraTweening = false;
                     rootNode.detachChild(bedroom);
+                    startTime = System.currentTimeMillis();
                 }
             } else {
                 //set up the orientation of the player        
@@ -472,7 +481,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 if (!slides.isEmpty()) {
                     putItHere(path, slides.get(1), location, rotation);
                 }
-                location += tpf * FORWARD_SPEED;
+                location += tpf * currentSpeed;
                 while (location >= 1) {
                     generateSlide(random, 1);
                     location -= 1;
@@ -535,6 +544,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                         }
                     }
                 }
+                //increase speed over time
+                float timeRunning = (System.currentTimeMillis() - startTime) / 1000f;
+                currentSpeed = Math.min(START_FORWARD_SPEED + 0.03f * (timeRunning / 25), MAX_FORWARD_SPEED);
+                currentTurnSpeed = Math.min(START_TURN_SPEED + 0.15f * (timeRunning / 25), MAX_TURN_SPEED);
             }
         } else if (!debugMode && !bedroom.isExploding()) {
             cameraNode.setLocalTranslation(-1, 1, -1);
@@ -583,9 +596,9 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     public void onAnalog(String name, float value, float tpf) {
         if ("clockwise".equals(name)) {
-            rotation += TURN_SPEED * tpf;
+            rotation += currentTurnSpeed * tpf;
         } else if ("counterclockwise".equals(name)) {
-            rotation -= TURN_SPEED * tpf;
+            rotation -= currentTurnSpeed * tpf;
         }
     }
 
