@@ -107,7 +107,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public static void main(String[] args) {
         AppSettings as = new AppSettings(true);
         as.setSamples(4);
-        as.setResolution(1280, 720);
+        as.setResolution(640, 480);
         as.setFrameRate(60);
         SINGLETON.setSettings(as);
         SINGLETON.setPauseOnLostFocus(true);
@@ -372,10 +372,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             if ((experienced + 1) % 3 == 0) { //if this is the 3rd spline then generate an obstacle
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez;
-                if (currentSpeed < (MAX_FORWARD_SPEED - START_FORWARD_SPEED) / 2) {
-                    clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DangerDuck.class};
+                if (currentSpeed - START_FORWARD_SPEED < (MAX_FORWARD_SPEED - START_FORWARD_SPEED) / 2) {
+                    clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DangerDuck.class, DoubleDodge.class, Jump.class};
                 } else {
-                    clazzez = new Class[]{DoubleDodge.class, Jump.class, DangerDuck.class};
+                    clazzez = new Class[]{DangerDuck.class, DoubleDodge.class, Jump.class};
                 }
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
                 try {
