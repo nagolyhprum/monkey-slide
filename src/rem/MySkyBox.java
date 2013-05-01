@@ -24,21 +24,24 @@ public class MySkyBox extends Node {
     public MySkyBox() {
         setCullHint(Node.CullHint.Never);
         night = SkyFactory.createSky(Main.getInstance().getAssetManager(), "Textures/skybox/StarrySky.dds", false);
-        Texture[] texs;
-        texs = LoadTextures("yellow");
-        yellow = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        texs = LoadTextures("brown");
-        brown = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        texs = LoadTextures("gray");
-        gray = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        texs = LoadTextures("blue");
-        blue = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
-        brightness = new Spatial[]{blue, gray, brown, yellow, night};
-        yellow_nm = generateSkyBox("yellow");
-        brown_nm = generateSkyBox("brown");
-        gray_nm = generateSkyBox("gray");
-        blue_nm = generateSkyBox("blue");
-        brightness_nm = new Spatial[]{blue_nm, yellow_nm, gray_nm, brown_nm, night};
+        if (Main.getInstance().isMotionSicknessSafe()) {
+            yellow_nm = generateSkyBox("yellow");
+            brown_nm = generateSkyBox("brown");
+            gray_nm = generateSkyBox("gray");
+            blue_nm = generateSkyBox("blue");
+            brightness_nm = new Spatial[]{blue_nm, yellow_nm, gray_nm, brown_nm, night};
+        } else {
+            Texture[] texs;
+            texs = LoadTextures("yellow");
+            yellow = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
+            texs = LoadTextures("brown");
+            brown = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
+            texs = LoadTextures("gray");
+            gray = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
+            texs = LoadTextures("blue");
+            blue = SkyFactory.createSky(Main.getInstance().getAssetManager(), texs[0], texs[1], texs[2], texs[3], texs[4], texs[5]);
+            brightness = new Spatial[]{blue, gray, brown, yellow, night};
+        }
         setLocalScale(50f);
     }
 
