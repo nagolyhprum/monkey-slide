@@ -21,7 +21,6 @@ import de.lessvoid.nifty.Nifty;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
-import kinecttcpclient.KinectTCPClient;
 import rem.Obstacle.DangerDodge;
 import rem.Obstacle.DangerDuck;
 import rem.Obstacle.Dodge;
@@ -411,7 +410,6 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     clazzez = new Class[]{DangerDuck.class, DoubleDodge.class, Jump.class, DangerDodge.class};
                 }
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
-                clazz = DangerDuck.class;
                 try {
                     if (clazz.equals(Dodge.class)) {
                         for (float j = 0.10f; j <= 0.85; j += 0.15) {
