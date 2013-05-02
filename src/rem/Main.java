@@ -21,6 +21,7 @@ import de.lessvoid.nifty.Nifty;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+import kinecttcpclient.KinectTCPClient;
 import rem.Obstacle.DangerDodge;
 import rem.Obstacle.DangerDuck;
 import rem.Obstacle.Dodge;
@@ -54,6 +55,10 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     public static final float HOVER_RISE = 1.5f;
     //initial velocity of a duck
     public static final float DUCK_POWER = 4f;
+    //kinect constants
+    public static final float SHOULDER_TILT_MIN = 100f;
+    public static final float CROUCH_DIST_MAX = 280f;
+    public static final float HAND_RAISE_MIN = 100f;
     private Bedroom bedroom;
     private Nifty nifty;
     private HashMap<String, AudioNode> obstacleAudio = new HashMap<String, AudioNode>();
@@ -107,8 +112,15 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private float currentSpeed;
     private float currentTurnSpeed;
     private long startTime;
+    private String kinectAddress;
+    private Kinect kinect;
 
     public static void main(String[] args) {
+        if (args.length > 0) {
+            SINGLETON.kinectAddress = args[0];
+        } else {
+            SINGLETON.kinectAddress = "127.0.0.1";
+        }
         AppSettings as = new AppSettings(true);
         as.setSamples(0);
         as.setResolution(1280, 720);
@@ -177,6 +189,13 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         isRunning = true;
         simpleUpdate(0);
         isRunning = false;
+        if (kinect == null) {
+            try {
+                kinect = new Kinect(kinectAddress, 8001);
+            } catch (Throwable e) {
+                kinect = null;
+            }
+        }
 
         if (!firstLaunch) {
             nifty.gotoScreen("start");
@@ -231,16 +250,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         initLightAndShadow();
         initSkybox();
         initCamera();
-        //create key events
-        InputManager im = getInputManager();
-        im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_J));
-        im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_L));
-        im.addMapping("duck", new KeyTrigger(KeyInput.KEY_K));
-        im.addMapping("jump", new KeyTrigger(KeyInput.KEY_I));
-        im.addMapping("reset", new KeyTrigger(KeyInput.KEY_O));
-        im.addMapping("debug", new KeyTrigger(KeyInput.KEY_BACKSLASH));
-        im.addListener(this, "clockwise", "counterclockwise");
-        im.addListener(this, "duck", "jump", "reset", "debug");
+        initControls();
         reset(true);
     }
 
@@ -401,6 +411,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                     clazzez = new Class[]{DangerDuck.class, DoubleDodge.class, Jump.class, DangerDodge.class};
                 }
                 Class clazz = clazzez[(int) (FastMath.rand.nextFloat() * clazzez.length)];
+                clazz = DangerDuck.class;
                 try {
                     if (clazz.equals(Dodge.class)) {
                         for (float j = 0.10f; j <= 0.85; j += 0.15) {
@@ -473,6 +484,41 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     @Override
     public void simpleUpdate(float tpf) {
         if (isRunning) {
+            if (kinect != null) {
+                kinect.update();
+                //kinect controls
+                Vector3f ls = kinect.getJoint(0, Kinect.Joint.SHOULDERLEFT);
+                Vector3f rs = kinect.getJoint(0, Kinect.Joint.SHOULDERRIGHT);
+                Vector3f wst = kinect.getJoint(0, Kinect.Joint.HIPCENTER);
+                Vector3f lw = kinect.getJoint(0, Kinect.Joint.WRISTLEFT);
+                Vector3f rw = kinect.getJoint(0, Kinect.Joint.WRISTRIGHT);
+                if (ls == null || rs == null || wst == null || lw == null || rw == null) {
+                    //no skeleton means do nothing
+                } else {
+                    float shoulder_diff = ls.getY() - rs.getY();
+                    if (Math.abs(shoulder_diff) > SHOULDER_TILT_MIN) {
+                        if (shoulder_diff > 0) {
+                            //turn counterclockwise
+                            onAnalog("kinect_counterclockwise", shoulder_diff, tpf);
+                        } else {
+                            //turn clockwise
+                            onAnalog("kinect_clockwise", shoulder_diff, tpf);
+                        }
+                    }
+                    if (!isJumping && !isDucking) {
+                        float lshoulderToWaist = ls.getY() - wst.getY();
+                        float rshoulderToWaist = rs.getY() - wst.getY();
+                        float lhandRaise = lw.getY() - ls.getY();
+                        float rhandRaise = rw.getY() - rs.getY();
+                        System.out.println("HANDS=" + Math.min(lhandRaise, rhandRaise));
+                        if (lshoulderToWaist < CROUCH_DIST_MAX && rshoulderToWaist < CROUCH_DIST_MAX) {
+                            onAction("duck", true, tpf);
+                        } else if (lhandRaise > HAND_RAISE_MIN && rhandRaise > HAND_RAISE_MIN) {
+                            onAction("jump", true, tpf);
+                        }
+                    }
+                }
+            }
             if (tpf > 0) {
                 if (!isCameraTweening) {
                     pointsCollected += 100 * tpf;
@@ -641,6 +687,8 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
             rotation += currentTurnSpeed * tpf;
         } else if ("counterclockwise".equals(name)) {
             rotation -= currentTurnSpeed * tpf;
+        } else if ("kinect_clockwise".equals(name) || "kinect_counterclockwise".equals(name)) {
+            rotation -= value / 60 * tpf;
         }
     }
 
@@ -648,15 +696,15 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         if (keyPressed) {
             if ("duck".equals(name) && !isDucking && !isJumping) {
                 duck.playInstance();
-                isDucking = keyPressed;
+                isDucking = true;
                 yVelocity = DUCK_POWER;
             } else if ("jump".equals(name) && !isDucking && !isJumping) {
                 jump.playInstance();
-                isJumping = keyPressed;
+                isJumping = true;
                 yVelocity = JUMP_POWER;
             } else if ("reset".equals(name)) {
                 reset(false);
-            } else if ("debug".equals(name) && keyPressed) {
+            } else if ("debug".equals(name)) {
                 debugMode = !debugMode;
             }
         }
@@ -675,5 +723,18 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
 
     boolean isMotionSicknessSafe() {
         return motionSicknessSafeMode;
+    }
+
+    public void initControls() {
+        //create key events
+        InputManager im = getInputManager();
+        im.addMapping("clockwise", new KeyTrigger(KeyInput.KEY_J));
+        im.addMapping("counterclockwise", new KeyTrigger(KeyInput.KEY_L));
+        im.addMapping("duck", new KeyTrigger(KeyInput.KEY_K));
+        im.addMapping("jump", new KeyTrigger(KeyInput.KEY_I));
+        im.addMapping("reset", new KeyTrigger(KeyInput.KEY_O));
+        im.addMapping("debug", new KeyTrigger(KeyInput.KEY_BACKSLASH));
+        im.addListener(this, "clockwise", "counterclockwise");
+        im.addListener(this, "duck", "jump", "reset", "debug");
     }
 }
