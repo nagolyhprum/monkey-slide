@@ -13,7 +13,7 @@ import java.util.List;
 public abstract class Obstacle extends Node {
 
     public static final int NUM_BIRDS = 10;
-    public static final int NUM_SKULLS = 12;
+    public static final int NUM_SKULLS = 13;
     public static final float DANGER_DUCK_DIP_DRIVE = 2f;
 
     private Obstacle() {
@@ -134,53 +134,51 @@ public abstract class Obstacle extends Node {
 
     public static class DangerDuck extends Obstacle {
 
-        private List<Spatial> birdList;
-        private int leadingBird;
+        private List<Spatial> skullList;
+        private int leadingSkull;
         private boolean[] movingUp;
         private float maxHeight;
 
         public DangerDuck() {
-            leadingBird = 0;
-            maxHeight = BezierCurve.RADIUS + 1.3f;
-            birdList = new ArrayList<Spatial>();
+            leadingSkull = 0;
+            maxHeight = BezierCurve.RADIUS + 1.65f;
+            skullList = new ArrayList<Spatial>();
             movingUp = new boolean[NUM_SKULLS];
             for (int i = 0; i < NUM_SKULLS; i++) {
                 Spatial geo = Main.getInstance().getAssetManager().loadModel("Models/skull/skull_monster.j3o");
                 geo.rotate(0, FastMath.PI, 0);
                 geo.setLocalTranslation(0, maxHeight, 0);
-                geo.scale(0.1f);
+                geo.scale(0.25f);
                 Node node = new Node();
                 node.attachChild(geo);
                 node.rotate(0, 0, FastMath.TWO_PI * i / NUM_SKULLS);
                 attachChild(node);
-                birdList.add(geo);
+                skullList.add(geo);
                 movingUp[i] = true;
             }
-            movingUp[leadingBird] = false;
+            movingUp[leadingSkull] = false;
         }
 
         @Override
         void update(float tpf) {
-            float lead_y = birdList.get(leadingBird).getLocalTranslation().getY();
+            float lead_y = skullList.get(leadingSkull).getLocalTranslation().getY();
             if (lead_y <= 0.66f * maxHeight) {
-                leadingBird = (leadingBird + 1) % NUM_SKULLS;
-                movingUp[leadingBird] = false;
+                leadingSkull = (leadingSkull + 1) % NUM_SKULLS;
+                movingUp[leadingSkull] = false;
             }
-            for (int i = 0; i < birdList.size(); i++) {
-                float bird_y = birdList.get(i).getLocalTranslation().getY();
+            for (int i = 0; i < skullList.size(); i++) {
+                float skull_y = skullList.get(i).getLocalTranslation().getY();
                 if (movingUp[i]) {
-                    if (bird_y < maxHeight) {
-                        System.out.println("bird " + i + " moving up");
+                    if (skull_y < maxHeight) {
                         //move up
-                        birdList.get(i).setLocalTranslation(0, bird_y + DANGER_DUCK_DIP_DRIVE * tpf, 0);
+                        skullList.get(i).setLocalTranslation(0, skull_y + DANGER_DUCK_DIP_DRIVE * tpf, 0);
                     }
                 } else {
-                    if (bird_y <= BezierCurve.RADIUS + 0.1f) {
+                    if (skull_y <= BezierCurve.RADIUS + 0.1f) {
                         movingUp[i] = true;
                     } else {
-                        System.out.println("bird " + i + "moving down");
                         //move down
-                        birdList.get(i).setLocalTranslation(0, bird_y + -DANGER_DUCK_DIP_DRIVE * tpf, 0);
+                        skullList.get(i).setLocalTranslation(0, skull_y + -DANGER_DUCK_DIP_DRIVE * tpf, 0);
                     }
                 }
             }
