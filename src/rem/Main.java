@@ -62,7 +62,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private Nifty nifty;
     private HashMap<String, AudioNode> obstacleAudio = new HashMap<String, AudioNode>();
     private AudioNode[] coinAudio = new AudioNode[10];
-    private AudioNode jump, duck;
+    private AudioNode jump, duck, alarmClock;
     //the current hover
     private float hover;
     //the number of splines in existance
@@ -210,6 +210,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
         }
         jump.setVolume(vol);
         duck.setVolume(vol);
+        alarmClock.setVolume(vol);
     }
 
     public void setBackgroundVolume(float vol) {
@@ -287,6 +288,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
     private void initActionAudio() {
         jump = new AudioNode(assetManager, "Sound/action/jump.ogg");
         duck = new AudioNode(assetManager, "Sound/action/duck.wav");
+        alarmClock = new AudioNode(assetManager, "Sound/action/Alarm-beeps.wav");
     }
 
     private void initCamera() {
@@ -405,7 +407,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                 //get all of the declared obstacles (i did this because i am lazy)
                 Class[] clazzez;
                 if (currentSpeed - START_FORWARD_SPEED < (MAX_FORWARD_SPEED - START_FORWARD_SPEED) / 2) {
-                    clazzez = new Class[]{Duck.class, Dodge.class, Jump.class, DangerDuck.class, DoubleDodge.class, Jump.class, DangerDodge.class};
+                    clazzez = new Class[]{Duck.class, Dodge.class, Jump.class};
                 } else {
                     clazzez = new Class[]{DangerDuck.class, DoubleDodge.class, Jump.class, DangerDodge.class};
                 }
@@ -603,6 +605,7 @@ public class Main extends SimpleApplication implements AnalogListener, ActionLis
                             isHurt = true;
                             characterModel.hurt();
                             if (!skyBox.brighter()) {
+                                alarmClock.play();
                                 reset(false);
                                 characterModel.wakeup();
                             } else {
